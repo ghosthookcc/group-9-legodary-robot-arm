@@ -7,3 +7,8 @@ from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 
+def main() -> int:
+    return 0
+
+if __name__ == "__main__":
+    main()
