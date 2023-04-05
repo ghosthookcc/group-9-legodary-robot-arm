@@ -7,9 +7,6 @@ from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 
-def FindItemAtLocation(position: any) -> bool:
-    pass
-
 def main() -> int:
     return 0
 
