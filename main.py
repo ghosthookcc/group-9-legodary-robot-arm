@@ -7,6 +7,8 @@ from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 
+ev3: EV3Brick = EV3Brick()
+
 clawMotor: Motor = Motor(Port.A)
 verticalMotor: Motor = Motor(Port.B)
 horizontalMotor: Motor = Motor(Port.C)
