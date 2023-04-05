@@ -7,6 +7,13 @@ from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 
+clawMotor: Motor = Motor(Port.A)
+verticalMotor: Motor = Motor(Port.B)
+horizontalMotor: Motor = Motor(Port.C)
+
+colorSensor: ColorSensor = ColorSensor(Port.S2)
+touchSensor: TouchSensor = TouchSensor(Port.S1)
+
 def main() -> int:
     return 0
 
