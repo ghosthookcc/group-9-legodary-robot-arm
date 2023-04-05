@@ -14,9 +14,6 @@ horizontalMotor: Motor = Motor(Port.C)
 colorSensor: ColorSensor = ColorSensor(Port.S2)
 touchSensor: TouchSensor = TouchSensor(Port.S1)
 
-def FindItemAtLocation(position: any):
-    pass
-
 def main() -> int:
     return 0
 
