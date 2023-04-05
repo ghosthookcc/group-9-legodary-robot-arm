@@ -15,6 +15,7 @@ colorSensor: ColorSensor = ColorSensor(Port.S2)
 touchSensor: TouchSensor = TouchSensor(Port.S1)
 
 def main() -> int:
+    #grab
     return 0
 
 if __name__ == "__main__":
