@@ -7,14 +7,22 @@ from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 
-clawMotor: Motor = Motor(Port.A)
-verticalMotor: Motor = Motor(Port.B)
-horizontalMotor: Motor = Motor(Port.C)
+clawMotor = Motor(Port.A)
+verticalMotor = Motor(Port.B)
+horizontalMotor = Motor(Port.C)
 
-colorSensor: ColorSensor = ColorSensor(Port.S2)
-touchSensor: TouchSensor = TouchSensor(Port.S1)
+colorSensor = ColorSensor(Port.S2)
+touchSensor = TouchSensor(Port.S1)
+
+def horizontalRotate(speed):
+    while (True):
+        horizontalMotor.run(speed)
+        wait(1000)
+        horizontalMotor.run(-speed)
+
 
 def main() -> int:
+    horizontalRotate(10)
     return 0
 
 if __name__ == "__main__":
