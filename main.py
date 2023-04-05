@@ -18,6 +18,7 @@ def FindItemAtLocation(position: any):
     pass
 
 def main() -> int:
+    #grab
     return 0
 
 if __name__ == "__main__":
