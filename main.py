@@ -6,6 +6,7 @@ from pybricks.parameters import Port, Stop, Direction, Button, Color
 from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
+import os
 
 clawMotor = Motor(Port.A)
 verticalMotor = Motor(Port.B)
@@ -48,6 +49,7 @@ def horizontalRotate(speed):
 def userInterface():
     exit = False
     while exit == False:
+        os.system("cls")
         print("1: Raise Claw")
         print("2: Lower Claw")
         print("3: Open Claw")
