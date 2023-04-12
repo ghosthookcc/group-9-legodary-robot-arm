@@ -32,11 +32,8 @@ def calibrate():
     raiseClaw()
     closeClaw()
     clawMotor.reset_angle(0)
-<<<<<<< HEAD
     clawVerticalAngle = 0.0
-=======
     horizontalMotor.reset_angle(0)
->>>>>>> 714b90f38ee1c29f820026a81bacc31a67f1f026
 
 def raiseClaw():
     verticalMotor.run_angle(300, -215)
@@ -73,7 +70,7 @@ def horizontalRotation():
             exitRotation = True
 
 def horizontalRotation(degree): # Negative number == left, Positive number == right
-    horizontalMotor.run_angle(200,degree)
+    horizontalMotor.run_angle(200,degree)   #720 grader är 180 grader, dvs 360 grader är från mitt till en sida
 
 
 def exitProgram():
