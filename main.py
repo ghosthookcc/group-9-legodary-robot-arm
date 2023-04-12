@@ -46,10 +46,14 @@ def horizontalRotate(speed):
         wait(1000)
         horizontalMotor.run(speed,150)
 
+def exitProgram():
+    closeClaw()
+    verticalMotor.run_until_stalled(200)
+    os._exit(0)
+
 def userInterface():
-    exit = False
-    while exit == False:
-        os.system("cls")
+    while True:
+        os.system("clear")
         print("1: Raise Claw")
         print("2: Lower Claw")
         print("3: Open Claw")
@@ -66,12 +70,12 @@ def userInterface():
         elif answer == "4":
             closeClaw()
         elif answer == "5":
-            exit = True
+            exitProgram()
 
-def main() -> int:
+def main():
     calibrate()
     userInterface()
-    return 0
+
 
 if __name__ == "__main__":
     main()
