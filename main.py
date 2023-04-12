@@ -14,15 +14,24 @@ horizontalMotor = Motor(Port.C)
 colorSensor = ColorSensor(Port.S2)
 touchSensor = TouchSensor(Port.S1)
 
+def calibrate():
+    verticalMotor.reset_angle(0)
+    verticalMotor.run_angle(300, -215)
+    
+def resetClaw():
+    verticalMotor.run_angle(300, 215)
+    verticalMotor.reset_angle(0)
+
 def horizontalRotate(speed):
     while (True):
-        horizontalMotor.run(speed)
+        horizontalMotor.run_angle(speed,-150)
         wait(1000)
-        horizontalMotor.run(-speed)
+        horizontalMotor.run(speed,150)
 
 
 def main() -> int:
-    horizontalRotate(10)
+    calibrate()
+    resetClaw()
     return 0
 
 if __name__ == "__main__":
