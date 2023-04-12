@@ -19,9 +19,11 @@ def calibrate():
     verticalMotor.run_angle(300, -215)
 
 def openClaw():
-    clawMotor.run_angle(30, -45)
+    clawMotor.run_angle(300, -45)
+
 def closeClaw():
-    clawMotor.run_until_stalled(30)
+    clawMotor.run_until_stalled(300)
+    clawMotor.hold()
     
 def resetClaw():
     verticalMotor.run_angle(300, 215)
@@ -47,6 +49,10 @@ def userInterface():
             calibrate()
         elif answer == "2":
             resetClaw()
+        elif answer =="3":
+            openClaw()
+        elif answer == "4":
+            closeClaw()
         elif answer == "5":
             exit = True
 
