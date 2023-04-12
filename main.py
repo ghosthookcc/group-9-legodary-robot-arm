@@ -6,6 +6,7 @@ from pybricks.parameters import Port, Stop, Direction, Button, Color
 from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
+
 import os
 
 clawMotor = Motor(Port.A)
@@ -15,30 +16,45 @@ horizontalMotor = Motor(Port.C)
 colorSensor = ColorSensor(Port.S2)
 touchSensor = TouchSensor(Port.S1)
 
+verticalMotorAngle = 0.0
+
+clawVerticalAngle = 0.0
+
+CLAWOPENANGLE = 90.0
+
+CLAWMAXVERTICALANGLE = 90.0
+
 def calibrate():
+    global clawVerticalAngle
+    global verticalMotorAngle
+
     verticalMotor.reset_angle(0)
     raiseClaw()
     closeClaw()
     clawMotor.reset_angle(0)
+    clawVerticalAngle = 0.0
 
 def raiseClaw():
     verticalMotor.run_angle(300, -215)
 
 def openClaw():
-    #print(clawMotor.angle() - 30.0)
-    if (clawMotor.angle() - 90.0 >= -180.0):
+    global clawVerticalAngle
+    newAngle = clawVerticalAngle - CLAWOPENANGLE
+    if (newAngle >= -CLAWMAXVERTICALANGLE):
+        clawVerticalAngle = newAngle
         clawMotor.stop()
-        clawMotor.run_angle(300, -90)
-    #print(clawMotor.angle())
+        clawMotor.run_angle(300, -CLAWOPENANGLE)
 
 def closeClaw():
+    global clawVerticalAngle
     clawMotor.run_until_stalled(300)
     clawMotor.hold()
-    clawMotor.reset_angle(0)
+    clawVerticalAngle = 0.0
+    clawMotor.reset_angle(0.0)
     
 def lowerClaw():
     verticalMotor.run_angle(300, 215)
-    verticalMotor.reset_angle(0)
+    verticalMotor.reset_angle(0.0)
 
 def horizontalRotate(speed):
     while (True):
