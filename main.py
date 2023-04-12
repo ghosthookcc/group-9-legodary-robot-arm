@@ -32,7 +32,11 @@ def calibrate():
     raiseClaw()
     closeClaw()
     clawMotor.reset_angle(0)
+<<<<<<< HEAD
     clawVerticalAngle = 0.0
+=======
+    horizontalMotor.reset_angle(0)
+>>>>>>> 714b90f38ee1c29f820026a81bacc31a67f1f026
 
 def raiseClaw():
     verticalMotor.run_angle(300, -215)
@@ -56,11 +60,21 @@ def lowerClaw():
     verticalMotor.run_angle(300, 215)
     verticalMotor.reset_angle(0.0)
 
-def horizontalRotate(speed):
-    while (True):
-        horizontalMotor.run_angle(speed,-150)
-        wait(1000)
-        horizontalMotor.run(speed,150)
+def horizontalRotation():
+    exitRotation = False
+    while exitRotation != True:
+        os.system("clear")
+        choice = input("Left: l \nRight: r \nExit: 0\n")
+        if choice == "r":
+            horizontalMotor.run_angle(200,50)
+        elif choice == "l":
+            horizontalMotor.run_angle(200,-50)
+        elif choice == "0":
+            exitRotation = True
+
+def horizontalRotation(degree): # Negative number == left, Positive number == right
+    horizontalMotor.run_angle(200,degree)
+
 
 def exitProgram():
     closeClaw()
@@ -74,7 +88,9 @@ def userInterface():
         print("2: Lower Claw")
         print("3: Open Claw")
         print("4: Close Claw")
-        print("5: Exit")
+        print("5: Rotate Claw")
+        print("6: Position Claw (Horizontal)")
+        print("0: Exit")
 
         answer = input(": ")
         if answer == "1":
@@ -86,6 +102,11 @@ def userInterface():
         elif answer == "4":
             closeClaw()
         elif answer == "5":
+            horizontalRotation()
+        elif answer == "6":
+            degree = int(input("Give degree: "))    #här behöver vi fixa om de skriver en string, catch
+            horizontalRotation(degree)
+        elif answer == "0":
             exitProgram()
 
 def main():
