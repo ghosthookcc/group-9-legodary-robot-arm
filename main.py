@@ -16,16 +16,26 @@ touchSensor = TouchSensor(Port.S1)
 
 def calibrate():
     verticalMotor.reset_angle(0)
+    raiseClaw()
+    closeClaw()
+    clawMotor.reset_angle(0)
+
+def raiseClaw():
     verticalMotor.run_angle(300, -215)
 
 def openClaw():
-    clawMotor.run_angle(300, -45)
+    #print(clawMotor.angle() - 30.0)
+    if (clawMotor.angle() - 90.0 >= -180.0):
+        clawMotor.stop()
+        clawMotor.run_angle(300, -90)
+    #print(clawMotor.angle())
 
 def closeClaw():
     clawMotor.run_until_stalled(300)
     clawMotor.hold()
+    clawMotor.reset_angle(0)
     
-def resetClaw():
+def lowerClaw():
     verticalMotor.run_angle(300, 215)
     verticalMotor.reset_angle(0)
 
@@ -38,17 +48,17 @@ def horizontalRotate(speed):
 def userInterface():
     exit = False
     while exit == False:
-        print("1: Calibrate")
-        print("2: Reset Claw")
+        print("1: Raise Claw")
+        print("2: Lower Claw")
         print("3: Open Claw")
         print("4: Close Claw")
         print("5: Exit")
 
         answer = input(": ")
         if answer == "1":
-            calibrate()
+            raiseClaw()
         elif answer == "2":
-            resetClaw()
+            lowerClaw()
         elif answer =="3":
             openClaw()
         elif answer == "4":
@@ -57,6 +67,7 @@ def userInterface():
             exit = True
 
 def main() -> int:
+    calibrate()
     userInterface()
     return 0
 
