@@ -17,6 +17,11 @@ touchSensor = TouchSensor(Port.S1)
 def calibrate():
     verticalMotor.reset_angle(0)
     verticalMotor.run_angle(300, -215)
+
+def openClaw():
+    clawMotor.run_angle(30, -45)
+def closeClaw():
+    clawMotor.run_until_stalled(30)
     
 def resetClaw():
     verticalMotor.run_angle(300, 215)
