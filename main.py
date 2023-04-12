@@ -22,8 +22,6 @@ def horizontalRotate(speed):
 
 
 def main() -> int:
-    #grab
-    horizontalRotate(10)
     return 0
 
 if __name__ == "__main__":
