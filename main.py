@@ -33,12 +33,32 @@ def horizontalRotate(speed):
         wait(1000)
         horizontalMotor.run(speed,150)
 
+def userInterface():
+    print("1: Calibrate")
+    print("2: Reset Claw")
+    print("3: Open Claw")
+    print("4: Close Claw")
+    print("5: Exit")
+
+    answer = input(": ")
+    if answer == "1":
+        calibrate()
+    elif answer == "2":
+        resetClaw()
+    elif answer == "5":
+        exit = True
 
 def main() -> int:
+<<<<<<< HEAD
     calibrate()
     openClaw()
     wait(1000)
     closeClaw()
+=======
+    exit = False
+    while exit == False:
+        userInterface()
+>>>>>>> 22244bbd18507ffa7b39c43c895b1a9e22c59e59
     return 0
 
 if __name__ == "__main__":
