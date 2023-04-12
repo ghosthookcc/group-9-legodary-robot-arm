@@ -49,16 +49,9 @@ def userInterface():
         exit = True
 
 def main() -> int:
-<<<<<<< HEAD
-    calibrate()
-    openClaw()
-    wait(1000)
-    closeClaw()
-=======
     exit = False
     while exit == False:
         userInterface()
->>>>>>> 22244bbd18507ffa7b39c43c895b1a9e22c59e59
     return 0
 
 if __name__ == "__main__":
