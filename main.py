@@ -24,6 +24,8 @@ CLAWOPENANGLE = 90.0
 
 CLAWMAXVERTICALANGLE = 90.0
 
+CLAWMAXHORIZONTALANGLE = 180.0
+
 def calibrate():
     global clawVerticalAngle
     global verticalMotorAngle
@@ -69,7 +71,7 @@ def horizontalRotation():
         elif choice == "0":
             exitRotation = True
 
-def horizontalRotation(degree): # Negative number == left, Positive number == right
+def decideHorizontalRotation(degree): # Negative number == left, Positive number == right
     horizontalMotor.run_angle(200,degree)   #720 grader är 180 grader, dvs 360 grader är från mitt till en sida
 
 
