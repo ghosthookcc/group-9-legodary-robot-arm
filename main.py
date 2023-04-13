@@ -16,6 +16,7 @@ horizontalMotor = Motor(Port.C)
 colorSensor = ColorSensor(Port.S2)
 touchSensor = TouchSensor(Port.S1)
 
+horizontalMotorAngle = 0.0
 verticalMotorAngle = 0.0
 
 clawVerticalAngle = 0.0
@@ -24,15 +25,28 @@ CLAWOPENANGLE = 90.0
 
 CLAWMAXVERTICALANGLE = 90.0
 
+HORIZONTALMOTORMAXANGLE = 720.0
+HORIZONTALMOTORHALFANGLE = 360.0
+
 def calibrate():
     global clawVerticalAngle
     global verticalMotorAngle
+    global horizontalMotorAngle
 
     verticalMotor.reset_angle(0)
     raiseClaw()
     closeClaw()
     clawMotor.reset_angle(0)
     clawVerticalAngle = 0.0
+    resetHorizontal()
+
+def resetHorizontal():
+    global horizontalMotorAngle
+    while not touchSensor.pressed():
+        horizontalMotorAngle += 10.0
+        horizontalRotation(10.0) 
+    horizontalRotation(-horizontalMotorAngle / 2.0)
+    horizontalMotorAngle = 0.0
     horizontalMotor.reset_angle(0)
 
 def raiseClaw():
@@ -57,24 +71,14 @@ def lowerClaw():
     verticalMotor.run_angle(300, 215)
     verticalMotor.reset_angle(0.0)
 
-def horizontalRotation():
-    exitRotation = False
-    while exitRotation != True:
-        os.system("clear")
-        choice = input("Left: l \nRight: r \nExit: 0\n")
-        if choice == "r":
-            horizontalMotor.run_angle(200,50)
-        elif choice == "l":
-            horizontalMotor.run_angle(200,-50)
-        elif choice == "0":
-            exitRotation = True
-
 def horizontalRotation(degree): # Negative number == left, Positive number == right
+    global horizontalMotorAngle
+    horizontalMotorAngle += degree
     horizontalMotor.run_angle(200,degree)   #720 grader är 180 grader, dvs 360 grader är från mitt till en sida
-
 
 def exitProgram():
     closeClaw()
+    resetHorizontal()
     verticalMotor.run_until_stalled(200)
     os._exit(0)
 
