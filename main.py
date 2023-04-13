@@ -9,6 +9,8 @@ from pybricks.media.ev3dev import SoundFile, ImageFile
 
 import os
 
+ev3 = EV3Brick()
+
 clawMotor = Motor(Port.A)
 verticalMotor = Motor(Port.B)
 horizontalMotor = Motor(Port.C)
@@ -27,6 +29,8 @@ CLAWMAXVERTICALANGLE = 90.0
 
 HORIZONTALMOTORMAXANGLE = 720.0
 HORIZONTALMOTORHALFANGLE = 360.0
+
+CLAWMAXHORIZONTALANGLE = 180.0
 
 def calibrate():
     global clawVerticalAngle
@@ -74,7 +78,7 @@ def lowerClaw():
 def horizontalRotation(degree): # Negative number == left, Positive number == right
     global horizontalMotorAngle
     horizontalMotorAngle += degree
-    horizontalMotor.run_angle(200,degree)   #720 grader är 180 grader, dvs 360 grader är från mitt till en sida
+    horizontalMotor.run_angle(200, degree)
 
 def exitProgram():
     closeClaw()
@@ -89,8 +93,6 @@ def userInterface():
         print("2: Lower Claw")
         print("3: Open Claw")
         print("4: Close Claw")
-        print("5: Rotate Claw")
-        print("6: Position Claw (Horizontal)")
         print("0: Exit")
 
         answer = input(": ")
@@ -102,11 +104,6 @@ def userInterface():
             openClaw()
         elif answer == "4":
             closeClaw()
-        elif answer == "5":
-            horizontalRotation()
-        elif answer == "6":
-            degree = int(input("Give degree: "))    #här behöver vi fixa om de skriver en string, catch
-            horizontalRotation(degree)
         elif answer == "0":
             exitProgram()
 
