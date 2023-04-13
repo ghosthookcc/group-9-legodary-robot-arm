@@ -1,4 +1,5 @@
 #!/usr/bin/env pybricks-micropython
+import os
 from pybricks.hubs import EV3Brick
 from pybricks.ev3devices import (Motor, TouchSensor, ColorSensor,
                                  InfraredSensor, UltrasonicSensor, GyroSensor)
@@ -7,14 +8,14 @@ from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 
-ev3: EV3Brick = EV3Brick()
+ev3 = EV3Brick()
 
-clawMotor: Motor = Motor(Port.A)
-verticalMotor: Motor = Motor(Port.B)
-horizontalMotor: Motor = Motor(Port.C)
+clawMotor = Motor(Port.A)
+verticalMotor = Motor(Port.B)
+horizontalMotor = Motor(Port.C)
 
-colorSensor: ColorSensor = ColorSensor(Port.S2)
-touchSensor: TouchSensor = TouchSensor(Port.S1)
+colorSensor = ColorSensor(Port.S2)
+touchSensor = TouchSensor(Port.S1)
 
 verticalMotorAngle = 0.0
 
@@ -25,6 +26,8 @@ CLAWOPENANGLE = 90.0
 CLAWMAXVERTICALANGLE = 90.0
 
 CLAWMAXHORIZONTALANGLE = 180.0
+
+RAISECLAW = 195.0
 
 def calibrate():
     global clawVerticalAngle
@@ -38,7 +41,7 @@ def calibrate():
     horizontalMotor.reset_angle(0)
 
 def raiseClaw():
-    verticalMotor.run_angle(300, -215)
+    verticalMotor.run_angle(300, -RAISECLAW)
 
 def openClaw():
     global clawVerticalAngle
@@ -56,8 +59,12 @@ def closeClaw():
     clawMotor.reset_angle(0.0)
     
 def lowerClaw():
-    verticalMotor.run_angle(300, 215)
+    verticalMotor.run_angle(300, RAISECLAW)
     verticalMotor.reset_angle(0.0)
+
+
+def findColor():
+    return colorSensor.color()
 
 def horizontalRotation():
     exitRotation = False
@@ -73,6 +80,39 @@ def horizontalRotation():
 
 def decideHorizontalRotation(degree): # Negative number == left, Positive number == right
     horizontalMotor.run_angle(200,degree)   #720 grader är 180 grader, dvs 360 grader är från mitt till en sida
+
+def sortColor():
+    color = findColor()
+    print(color)
+    amount = 0
+
+    if color == Color.BLUE:
+        decideHorizontalRotation(-360)
+        lowerClaw()
+        openClaw()
+        raiseClaw()
+        decideHorizontalRotation(360)
+    elif color == Color.RED:
+        decideHorizontalRotation(360)
+        lowerClaw()
+        openClaw()
+        raiseClaw()
+        decideHorizontalRotation(-360)
+    else:
+        wait(2000)
+
+
+
+def searchForObject():
+    while True:
+        openClaw()
+        wait(1000)
+        lowerClaw()
+        closeClaw()
+        raiseClaw()
+        sortColor()
+
+
 
 
 def exitProgram():
@@ -110,7 +150,8 @@ def userInterface():
 
 def main():
     calibrate()
-    userInterface()
+    #userInterface()
+    searchForObject()
 
 
 if __name__ == "__main__":
