@@ -37,11 +37,11 @@ def calibrate():
     global verticalMotorAngle
     global horizontalMotorAngle
 
-    verticalMotor.reset_angle(0)
+    verticalMotor.reset_angle(0.0)
+
     raiseClaw()
     closeClaw()
-    clawMotor.reset_angle(0)
-    clawVerticalAngle = 0.0
+
     resetHorizontal()
 
 def resetHorizontal():
@@ -54,7 +54,12 @@ def resetHorizontal():
     horizontalMotor.reset_angle(0)
 
 def raiseClaw():
-    verticalMotor.run_angle(300, -215)
+    verticalMotor.run_angle(200, -215)
+
+def lowerClaw():
+    verticalMotor.run_until_stalled(200)
+    verticalMotor.reset_angle(0.0)
+
 
 def openClaw():
     global clawVerticalAngle
@@ -70,10 +75,6 @@ def closeClaw():
     clawMotor.hold()
     clawVerticalAngle = 0.0
     clawMotor.reset_angle(0.0)
-    
-def lowerClaw():
-    verticalMotor.run_angle(300, 215)
-    verticalMotor.reset_angle(0.0)
 
 def horizontalRotation(degree): # Negative number == left, Positive number == right
     global horizontalMotorAngle
