@@ -18,7 +18,7 @@ horizontalMotor = Motor(Port.C)
 colorSensor = ColorSensor(Port.S2)
 touchSensor = TouchSensor(Port.S1)
 
-horizontalMotorAngle = 0.0
+robotHorizontalMotorAngle = 0.0
 verticalMotorAngle = 0.0
 
 clawVerticalAngle = 0.0
@@ -35,10 +35,26 @@ CLAWMAXHORIZONTALANGLE = 180.0
 def findColor():
     return colorSensor.color()
 
+def motorAngleToDegrees(angle: float) -> float:
+    return angle / 4
+
+def degreeToMotorAngle(degree: float) -> float:
+    return degree * 4
+
+def moveToGivenDegree(horizontalPositionDegree: any):
+    global robotHorizontalMotorAngle
+    itemHorizontalMotorAngle = degreeToMotorAngle(horizontalPositionDegree)
+    if itemHorizontalMotorAngle < robotHorizontalMotorAngle:
+        moveAngle = abs(robotHorizontalMotorAngle) + abs(itemHorizontalMotorAngle)
+        horizontalMotor.run_angle(200, (-moveAngle))
+    elif itemHorizontalMotorAngle > robotHorizontalMotorAngle:
+        moveAngle = abs(robotHorizontalMotorAngle) + abs(itemHorizontalMotorAngle)
+        horizontalMotor.run_angle(200, (moveAngle))
+
 def calibrate():
     global clawVerticalAngle
     global verticalMotorAngle
-    global horizontalMotorAngle
+    global robotHorizontalMotorAngle
 
     verticalMotor.reset_angle(0.0)
 
@@ -48,12 +64,12 @@ def calibrate():
     resetHorizontal()
 
 def resetHorizontal():
-    global horizontalMotorAngle
+    global robotHorizontalMotorAngle
     while not touchSensor.pressed():
-        horizontalMotorAngle += 10.0
+        robotHorizontalMotorAngle += 10.0
         horizontalRotation(10.0) 
-    horizontalRotation(-horizontalMotorAngle / 2.0)
-    horizontalMotorAngle = 0.0
+    horizontalRotation(-robotHorizontalMotorAngle / 2.0)
+    robotHorizontalMotorAngle = 0.0
     horizontalMotor.reset_angle(0)
 
 def raiseClaw():
@@ -79,8 +95,8 @@ def closeClaw():
     clawMotor.reset_angle(0.0)
 
 def horizontalRotation(degree): # Negative number == left, Positive number == right
-    global horizontalMotorAngle
-    horizontalMotorAngle += degree
+    global robotHorizontalMotorAngle
+    robotHorizontalMotorAngle += degree
     horizontalMotor.run_angle(200, degree)
 
 def exitProgram():
