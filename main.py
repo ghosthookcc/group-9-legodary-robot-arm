@@ -32,6 +32,9 @@ HORIZONTALMOTORHALFANGLE = 360.0
 
 CLAWMAXHORIZONTALANGLE = 180.0
 
+def findColor():
+    return colorSensor.color()
+
 def calibrate():
     global clawVerticalAngle
     global verticalMotorAngle
@@ -54,12 +57,11 @@ def resetHorizontal():
     horizontalMotor.reset_angle(0)
 
 def raiseClaw():
-    verticalMotor.run_angle(200, -215)
+    verticalMotor.run_angle(200, -195)
 
 def lowerClaw():
-    verticalMotor.run_until_stalled(200)
+    verticalMotor.run_until_stalled(50)
     verticalMotor.reset_angle(0.0)
-
 
 def openClaw():
     global clawVerticalAngle
