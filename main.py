@@ -105,6 +105,36 @@ def exitProgram():
     verticalMotor.run_until_stalled(200)
     os._exit(0)
 
+def pickupItem():
+    openClaw()
+    wait(3000)
+    lowerClaw()
+    wait(3000)
+    closeClaw()
+    wait(3000)
+    raiseClaw()
+    wait(3000)
+
+def dropOffItem():
+    lowerClaw()
+    wait(3000)
+    openClaw()
+    wait(3000)
+    raiseClaw()
+    wait(3000)
+
+def robotAutomation():
+    while True:
+        ev3.light.of()
+        pickupItem()
+        color = findColor()
+        ev3.light.on(color)
+        if color == (Color.BLUE or Color.RED):
+            while not (ev3.buttons.pressed(2)):
+                pass
+        dropOffItem()
+
+    
 def userInterface():
     while True:
         os.system("clear")
@@ -123,6 +153,8 @@ def userInterface():
             openClaw()
         elif answer == "4":
             closeClaw()
+        elif answer == "5":
+            robotAutomation()
         elif answer == "0":
             exitProgram()
 
