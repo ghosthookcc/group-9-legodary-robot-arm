@@ -53,7 +53,7 @@ def openClaw():
 
 def closeClaw():
     global clawVerticalAngle
-    clawMotor.run_until_stalled(300)
+    clawMotor.run_until_stalled(100,duty_limit=30)
     clawMotor.hold()
     clawVerticalAngle = 0.0
     clawMotor.reset_angle(0.0)
@@ -81,36 +81,35 @@ def horizontalRotation():
 def decideHorizontalRotation(degree): # Negative number == left, Positive number == right
     horizontalMotor.run_angle(200,degree)   #720 grader är 180 grader, dvs 360 grader är från mitt till en sida
 
-def sortColor():
+def colorZoneSorting():
     color = findColor()
-    print(color)
-    amount = 0
+    colorList = []
+    count = 0
+    if color not in colorList and count<3:
+        colorList.append(color)
+        count += 1
+    elif color in colorList:
+        index = 0
+        for i in range(len(colorList)):
+            if color == colorList[i]:
+                index = i+1     #+1 ty positionerna räknar vi i heltal och inte från index 0
+        position = index*(240)    #60 grader * 4 = 240, plockar upp från höger och 
+        decideHorizontalRotation(position)
+    else:   #här får migrationsverket göra sitt arbete
+        raiseClaw()
+        horizontalMotor.run_angle(700,350, wait=False)
+        openClaw()
 
-    if color == Color.BLUE:
-        decideHorizontalRotation(-360)
-        lowerClaw()
-        openClaw()
-        raiseClaw()
-        decideHorizontalRotation(360)
-    elif color == Color.RED:
-        decideHorizontalRotation(360)
-        lowerClaw()
-        openClaw()
-        raiseClaw()
-        decideHorizontalRotation(-360)
-    else:
-        wait(2000)
+    
+
+def pickupZone():
+    pass
 
 
 
 def searchForObject():
     while True:
-        openClaw()
-        wait(1000)
-        lowerClaw()
-        closeClaw()
-        raiseClaw()
-        sortColor()
+        colorZoneSorting()    #helst ska den återvända till en nollpunkt eller pickup-location innan den börjar sortera
 
 
 
@@ -150,7 +149,6 @@ def userInterface():
 
 def main():
     calibrate()
-    #userInterface()
     searchForObject()
 
 
