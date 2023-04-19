@@ -76,7 +76,7 @@ def raiseClaw():
     verticalMotor.run_angle(200, -195)
 
 def lowerClaw():
-    verticalMotor.run_until_stalled(50)
+    verticalMotor.run_angle(200, 195)
     verticalMotor.reset_angle(0.0)
 
 def openClaw():
@@ -125,16 +125,27 @@ def dropOffItem():
 
 def robotAutomation():
     while True:
-        ev3.light.of()
+        ev3.light.off()
         pickupItem()
         color = findColor()
         ev3.light.on(color)
-        if color == (Color.BLUE or Color.RED):
-            while not (ev3.buttons.pressed(2)):
+        print(color)
+        if ((color == Color.GREEN) 
+            or (color == Color.RED) 
+            or (color ==  Color.BLUE)):
+            while not (ev3.buttons.pressed()):
                 pass
         dropOffItem()
 
-    
+def demofunction(): #Temp function to show off use cases for sprint 1
+    while True:
+        if ev3.buttons.pressed(4):
+            pickupItem()
+        elif ev3.buttons.pressed(5):
+            dropOffItem()
+        elif ev3.buttons.pressed(2):
+            ev3.light.on(findColor())
+
 def userInterface():
     while True:
         os.system("clear")
@@ -142,6 +153,11 @@ def userInterface():
         print("2: Lower Claw")
         print("3: Open Claw")
         print("4: Close Claw")
+        print("5: Pick up Item")
+        print("6: Drop off Item")
+        print("7: Prototype Automation")
+        print("8: Button Control")
+        print("9: Color")
         print("0: Exit")
 
         answer = input(": ")
@@ -154,13 +170,21 @@ def userInterface():
         elif answer == "4":
             closeClaw()
         elif answer == "5":
+            pickupItem()
+        elif answer == "6":
+            dropOffItem()
+        elif answer == "7":
             robotAutomation()
+        elif answer == "8":
+            demofunction()
+        elif answer == "9":
+            ev3.light.on(findColor())
         elif answer == "0":
             exitProgram()
 
 def main():
     calibrate()
-    userInterface()
+    robotAutomation()
 
 
 if __name__ == "__main__":
