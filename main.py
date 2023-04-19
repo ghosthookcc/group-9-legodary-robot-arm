@@ -18,11 +18,6 @@ horizontalMotor = Motor(Port.C)
 colorSensor = ColorSensor(Port.S2)
 touchSensor = TouchSensor(Port.S1)
 
-robotHorizontalMotorAngle = 0.0
-verticalMotorAngle = 0.0
-
-clawVerticalAngle = 0.0
-
 CLAWOPENANGLE = 90.0
 
 CLAWMAXVERTICALANGLE = 90.0
@@ -32,160 +27,136 @@ HORIZONTALMOTORHALFANGLE = 360.0
 
 CLAWMAXHORIZONTALANGLE = 180.0
 
-def findColor():
-    return colorSensor.color()
+class Robot(object):
+    def __init__(self):
+        self.robotHorizontalMotorAngle = 0.0 
+        self.clawVerticalAngle = 0.0
+        self.robotVerticalMotorAngle = 0.0
 
-def motorAngleToDegrees(angle: float) -> float:
-    return angle / 4
+    def findColor(self):
+        return colorSensor.color()
 
-def degreeToMotorAngle(degree: float) -> float:
-    return degree * 4
+    def calibrate(self):
+        RobotClaw.raiseClaw(self)
+        RobotClaw.closeClaw(self)
+        RobotReset.resetAll(self)
+        
+    def userInterface(self):
+        while True:
+            os.system("clear")
+            print("1: Raise Claw")
+            print("2: Lower Claw")
+            print("3: Open Claw")
+            print("4: Close Claw")
+            print("0: Exit")
 
-def moveToGivenDegree(horizontalPositionDegree: any):
-    global robotHorizontalMotorAngle
-    itemHorizontalMotorAngle = degreeToMotorAngle(horizontalPositionDegree)
-    if itemHorizontalMotorAngle < robotHorizontalMotorAngle:
-        moveAngle = abs(robotHorizontalMotorAngle) + abs(itemHorizontalMotorAngle)
-        horizontalMotor.run_angle(200, (-moveAngle))
-    elif itemHorizontalMotorAngle > robotHorizontalMotorAngle:
-        moveAngle = abs(robotHorizontalMotorAngle) + abs(itemHorizontalMotorAngle)
-        horizontalMotor.run_angle(200, (moveAngle))
+            answer = input(": ")
+            if answer == "1":
+                RobotClaw.raiseClaw(self)
+            elif answer == "2":
+                RobotClaw.lowerClaw(self)
+            elif answer =="3":
+                RobotClaw.openClaw(self)
+            elif answer == "4":
+                RobotClaw.closeClaw(self)
+            elif answer == "0":
+                RobotReset.exitProgram(self)
+    
+    def manual(self):
+        self.calibrate()
+        self.userInterface()
+    def automate(self):
+        self.calibrate()
+        while True:
+            ev3.light.off()
+            RobotClaw.pickupItem(self)
+            color = self.findColor(self)
+            ev3.light.on(color)
+            if (color == Color.RED or 
+                color == Color.BLUE or
+                color == Color.GREEN or
+                color == Color.YELLOW):
+                while not (ev3.buttons.pressed()):
+                    pass
+            RobotClaw.dropOffItem(self)
 
-def calibrate():
-    global clawVerticalAngle
-    global verticalMotorAngle
-    global robotHorizontalMotorAngle
+class RobotMotors(Robot):
+    def angleToDegrees(self, angle: float) -> float:
+        return angle / 4
+    def degreeToMotorAngle(self, degree: float) -> float:
+        return degree * 4
+    def moveByGivenDegree(self, horizontalMotorAngle: float):
+        #motorAngleAsDegree = RobotMotors.angleToDegrees(self, horizontalMotorAngle)
+        #horizontalMotor.run_angle(200, motorAngleAsDegree)
+        self.robotHorizontalMotorAngle += horizontalMotorAngle
+        horizontalMotor.run_angle(200, horizontalMotorAngle)
+    
 
-    verticalMotor.reset_angle(0.0)
+class RobotClaw(Robot):
+    def raiseClaw(self):
+        verticalMotor.run_angle(200, -195)
 
-    raiseClaw()
-    closeClaw()
+    def lowerClaw(self):
+        verticalMotor.run_until_stalled(50)
+        verticalMotor.reset_angle(0.0)
 
-    resetHorizontal()
+    def openClaw(self):
+        newAngle = self.clawVerticalAngle - CLAWOPENANGLE
+        if (newAngle >= -CLAWMAXVERTICALANGLE):
+            self.clawVerticalAngle = newAngle
+            clawMotor.stop()
+            clawMotor.run_angle(300, -CLAWOPENANGLE)
 
-def resetHorizontal():
-    global robotHorizontalMotorAngle
-    while not touchSensor.pressed():
-        robotHorizontalMotorAngle += 10.0
-        horizontalRotation(10.0) 
-    horizontalRotation(-robotHorizontalMotorAngle / 2.0)
-    robotHorizontalMotorAngle = 0.0
-    horizontalMotor.reset_angle(0)
+    def closeClaw(self):
+        clawMotor.run_until_stalled(300)
+        clawMotor.hold()
+        self.clawVerticalAngle = 0.0
+        clawMotor.reset_angle(0.0)
 
-def raiseClaw():
-    verticalMotor.run_angle(200, -195)
+    def pickupItem(self):
+        self.openClaw()
+        wait(1000)
+        self.lowerClaw()
+        wait(1000)
+        self.closeClaw()
+        wait(1000)
+        self.raiseClaw()
+        wait(1000)
 
-def lowerClaw():
-    verticalMotor.run_angle(200, 195)
-    verticalMotor.reset_angle(0.0)
+    def dropOffItem(self):
+        self.lowerClaw()
+        wait(1000)
+        self.openClaw()
+        wait(1000)
+        self.raiseClaw()
+        wait(1000)
 
-def openClaw():
-    global clawVerticalAngle
-    newAngle = clawVerticalAngle - CLAWOPENANGLE
-    if (newAngle >= -CLAWMAXVERTICALANGLE):
-        clawVerticalAngle = newAngle
-        clawMotor.stop()
-        clawMotor.run_angle(300, -CLAWOPENANGLE)
+class RobotReset(Robot):
+    def resetHorizontal(self):
+        while not touchSensor.pressed():
+            RobotMotors.moveByGivenDegree(self, 10.0)
+        RobotMotors.moveByGivenDegree(self, -self.robotHorizontalMotorAngle)
+        self.robotHorizontalMotorAngle = 0.0
+        horizontalMotor.reset_angle(0.0)
 
-def closeClaw():
-    global clawVerticalAngle
-    clawMotor.run_until_stalled(300)
-    clawMotor.hold()
-    clawVerticalAngle = 0.0
-    clawMotor.reset_angle(0.0)
+    def resetVertical(self):
+        verticalMotor.run_until_stalled(100)
+        self.robotVerticalMotorAngle = 0.0
+        verticalMotor.reset_angle(0.0)
 
-def horizontalRotation(degree): # Negative number == left, Positive number == right
-    global robotHorizontalMotorAngle
-    robotHorizontalMotorAngle += degree
-    horizontalMotor.run_angle(200, degree)
+    def resetAll(self):
+        RobotReset.resetHorizontal(self)
+        RobotReset.resetVertical(self)
 
-def exitProgram():
-    closeClaw()
-    resetHorizontal()
-    verticalMotor.run_until_stalled(200)
-    os._exit(0)
+    def exitProgram(self):
+        RobotClaw.closeClaw(self)
+        RobotReset.resetAll(self)
+        os._exit(0)
 
-def pickupItem():
-    openClaw()
-    wait(3000)
-    lowerClaw()
-    wait(3000)
-    closeClaw()
-    wait(3000)
-    raiseClaw()
-    wait(3000)
-
-def dropOffItem():
-    lowerClaw()
-    wait(3000)
-    openClaw()
-    wait(3000)
-    raiseClaw()
-    wait(3000)
-
-def robotAutomation():
-    while True:
-        ev3.light.off()
-        pickupItem()
-        color = findColor()
-        ev3.light.on(color)
-        print(color)
-        if ((color == Color.GREEN) 
-            or (color == Color.RED) 
-            or (color ==  Color.BLUE)):
-            while not (ev3.buttons.pressed()):
-                pass
-        dropOffItem()
-
-def demofunction(): #Temp function to show off use cases for sprint 1
-    while True:
-        if ev3.buttons.pressed(4):
-            pickupItem()
-        elif ev3.buttons.pressed(5):
-            dropOffItem()
-        elif ev3.buttons.pressed(2):
-            ev3.light.on(findColor())
-
-def userInterface():
-    while True:
-        os.system("clear")
-        print("1: Raise Claw")
-        print("2: Lower Claw")
-        print("3: Open Claw")
-        print("4: Close Claw")
-        print("5: Pick up Item")
-        print("6: Drop off Item")
-        print("7: Prototype Automation")
-        print("8: Button Control")
-        print("9: Color")
-        print("0: Exit")
-
-        answer = input(": ")
-        if answer == "1":
-            raiseClaw()
-        elif answer == "2":
-            lowerClaw()
-        elif answer =="3":
-            openClaw()
-        elif answer == "4":
-            closeClaw()
-        elif answer == "5":
-            pickupItem()
-        elif answer == "6":
-            dropOffItem()
-        elif answer == "7":
-            robotAutomation()
-        elif answer == "8":
-            demofunction()
-        elif answer == "9":
-            ev3.light.on(findColor())
-        elif answer == "0":
-            exitProgram()
+robot = Robot()
 
 def main():
-    calibrate()
-    robotAutomation()
-
+    robot.manual()
 
 if __name__ == "__main__":
     main()
