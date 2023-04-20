@@ -22,5 +22,14 @@ def findColor():
 def main() -> int:
     return 0
 
+def itemExistsAtLocation(location):
+    itemExists = False
+    #moveToGivenDegree(degreeToMotorAngle)
+    #pickup
+    if findColor():
+        itemExists = True
+        #putdown
+    return itemExists
+
 if __name__ == "__main__":
     main()
