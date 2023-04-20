@@ -32,14 +32,20 @@ class Robot(object):
         self.robotHorizontalMotorAngle = 0.0 
         self.clawVerticalAngle = 0.0
         self.robotVerticalMotorAngle = 0.0
+        self.CLAWRESISTANCE = 0.0
+        self.ITEMRESISTANCE = 0.0
+        self.VERTICALRESISTANCE = 0.0
 
     def findColor(self):
         return colorSensor.color()
 
     def calibrate(self):
+        self.CLAWRESISTANCE = RobotMotors.meassureResistance(self, clawMotor)
+        RobotClaw.openClaw(self)
+        self.VERTICALRESISTANCE = RobotMotors.meassureResistance(self, verticalMotor)
         RobotClaw.raiseClaw(self)
         RobotClaw.closeClaw(self)
-        RobotReset.resetAll(self)
+        RobotReset.resetHorizontal(self)
         
     def userInterface(self):
         while True:
@@ -59,6 +65,8 @@ class Robot(object):
                 RobotClaw.openClaw(self)
             elif answer == "4":
                 RobotClaw.closeClaw(self)
+            elif answer == "5":
+                ev3.light.on(Robot.findColor(self))
             elif answer == "0":
                 RobotReset.exitProgram(self)
     
@@ -91,14 +99,18 @@ class RobotMotors(Robot):
         self.robotHorizontalMotorAngle += horizontalMotorAngle
         horizontalMotor.run_angle(200, horizontalMotorAngle)
     
-
+    def meassureResistance(self,motor):
+        resistance = motor.run_until_stalled(70,Stop.HOLD,80)
+        return resistance
+    
 class RobotClaw(Robot):
     def raiseClaw(self):
-        verticalMotor.run_angle(200, -195)
+        #verticalMotor.run_angle(200, -195)
+        verticalMotor.run_target(100, -210)
 
     def lowerClaw(self):
-        verticalMotor.run_until_stalled(50)
-        verticalMotor.reset_angle(0.0)
+        verticalMotor.run_target(100,self.VERTICALRESISTANCE)
+        #verticalMotor.reset_angle(0.0)
 
     def openClaw(self):
         newAngle = self.clawVerticalAngle - CLAWOPENANGLE
@@ -108,7 +120,7 @@ class RobotClaw(Robot):
             clawMotor.run_angle(300, -CLAWOPENANGLE)
 
     def closeClaw(self):
-        clawMotor.run_until_stalled(300)
+        clawMotor.run_until_stalled(100)
         clawMotor.hold()
         self.clawVerticalAngle = 0.0
         clawMotor.reset_angle(0.0)
@@ -140,7 +152,8 @@ class RobotReset(Robot):
         horizontalMotor.reset_angle(0.0)
 
     def resetVertical(self):
-        verticalMotor.run_until_stalled(100)
+        RobotClaw.openClaw(self)
+        verticalMotor.run_until_stalled(100, Stop.HOLD, 10)
         self.robotVerticalMotorAngle = 0.0
         verticalMotor.reset_angle(0.0)
 
