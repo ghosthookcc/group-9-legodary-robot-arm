@@ -29,6 +29,10 @@ CLAWMAXHORIZONTALANGLE = 180.0
 
 RAISECLAW = 195.0
 
+colorList = []
+
+count = 0
+
 def calibrate():
     global clawVerticalAngle
     global verticalMotorAngle
@@ -81,11 +85,10 @@ def horizontalRotation():
 def decideHorizontalRotation(degree): # Negative number == left, Positive number == right
     horizontalMotor.run_angle(200,degree)   #720 grader är 180 grader, dvs 360 grader är från mitt till en sida
 
-def colorZoneSorting():
+def colorZoneSorting(count):
     horizontalMotor.run_angle(200,-360)
     color = findColor()
-    colorList = []
-    count = 0
+    
     if color not in colorList and count<3:
         colorList.append(color)
         count += 1
@@ -115,7 +118,7 @@ def searchForObject():
         lowerClaw()
         closeClaw()
         raiseClaw()
-        colorZoneSorting()    #helst ska den återvända till en nollpunkt eller pickup-location innan den börjar sortera
+        colorZoneSorting(count)    #helst ska den återvända till en nollpunkt eller pickup-location innan den börjar sortera
 
 
 
