@@ -32,15 +32,6 @@ def moveToGivenDegree(horizontalPositionDegree: any):
         moveAngle = abs(robotHorizontalMotorAngle) + abs(itemHorizontalMotorAngle)
         horizontalMotor.run_angle(200, (moveAngle))
 
-def itemExistsAtLocation(location):
-    itemExists = False
-    moveToGivenDegree(degreeToMotorAngle)
-    #pickup
-    if colorSensor.color():
-        itemExists = True
-        #putdown
-    return itemExists
-
 def main() -> int:
     return 0
 
