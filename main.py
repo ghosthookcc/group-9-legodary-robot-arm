@@ -82,6 +82,7 @@ def decideHorizontalRotation(degree): # Negative number == left, Positive number
     horizontalMotor.run_angle(200,degree)   #720 grader är 180 grader, dvs 360 grader är från mitt till en sida
 
 def colorZoneSorting():
+    horizontalMotor.run_angle(200,-360)
     color = findColor()
     colorList = []
     count = 0
@@ -94,11 +95,12 @@ def colorZoneSorting():
             if color == colorList[i]:
                 index = i+1     #+1 ty positionerna räknar vi i heltal och inte från index 0
         position = index*(240)    #60 grader * 4 = 240, plockar upp från höger och 
-        decideHorizontalRotation(position)
+        horizontalMotor.run_angle(200,position)
     else:   #här får migrationsverket göra sitt arbete
         raiseClaw()
         horizontalMotor.run_angle(700,350, wait=False)
         openClaw()
+    horizontalMotor.run_angle(200,360-position)
 
     
 
@@ -109,6 +111,10 @@ def pickupZone():
 
 def searchForObject():
     while True:
+        openClaw()
+        lowerClaw()
+        closeClaw()
+        raiseClaw()
         colorZoneSorting()    #helst ska den återvända till en nollpunkt eller pickup-location innan den börjar sortera
 
 
