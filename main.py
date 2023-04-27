@@ -50,7 +50,6 @@ class Robot(object):
 
         RobotClaw.openClaw(self)
         self.CLAWRESISTANCE = RobotMotors.meassureResistance(self, clawMotor)
-        RobotClaw.closeClaw(self)
         RobotClaw.openClaw(self)
         self.VERTICALRESISTANCE = RobotMotors.meassureResistance(self, verticalMotor)
 
@@ -59,7 +58,7 @@ class Robot(object):
 
     def userInterface(self):
         while True:
-            input(": Press any key :")
+            #input(": Press any key :")
             os.system("clear")
             print("1: Raise Claw")
             print("2: Lower Claw")
@@ -201,13 +200,14 @@ class RobotClaw(Robot):
     def isHoldingItem(self) -> bool:
         isHolding = False
         t_end = time.time() + 3.0
-        stepping = clawMotor.angle() / 5.0
-        while (-90.0 <= clawMotor.angle() <= 90.0):
+        stepping = self.clawVerticalAngle / 5.0
+        while (-90.0 <= self.clawVerticalAngle <= 90.0):
+            print(self.clawVerticalAngle)
             if (time.time() > t_end):
                 isHolding = True
                 break
-            clawMotor.run_target(50,stepping)
             self.clawVerticalAngle += stepping
+            clawMotor.run_target(100, self.clawVerticalAngle)
         return isHolding
 
         #isHolding = False
