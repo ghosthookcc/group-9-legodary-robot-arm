@@ -36,7 +36,6 @@ class Robot(object):
         self.CLAWRESISTANCE = 0.0
         self.VERTICALRESISTANCE = 0.0
         self.rotationScale = None
-        RobotCalibrate.calibrate(self)
 
     def findColor(self):
         return colorSensor.color()
@@ -56,6 +55,22 @@ class Robot(object):
 
         RobotClaw.raiseClaw(self)
         RobotClaw.closeClaw(self)
+    
+    def calinrateZones():
+        zonelst = ["Pickup Zone", "Drop off Zone 1","Drop off Zone 2", "Drop off Zone 3" ]
+        for index, i in enumerate(zonelst):
+            ev3.screen.draw_text(40, 50,i)
+            while not ev3.buttons.pressed()[0] == Button.CENTER:
+                pressedButton = ev3.buttons.pressed()[0]
+                if pressedButton == Button.UP:
+                    verticalMotor.run_angle(100, 10)
+                elif pressedButton == Button.DOWN:
+                    verticalMotor.run_angle(100,-10)
+                elif pressedButton == Button.RIGHT:
+                    horizontalMotor.run_angle(100,10)
+                elif pressedButton == Button.LEFT:
+                    horizontalMotor.run_angle(100,-10)
+            zonelst[index] = ()
 
     def userInterface(self):
         while True:
@@ -92,9 +107,10 @@ class Robot(object):
                 isHolding = RobotClaw.isHoldingItem(self)
                 print("Item is being held: " + str(isHolding))
             elif answer == "0":
-                RobotCalibrate.exitProgram(self)
+                RobotReset.exitProgram(self)
     
     def manual(self):
+        self.calibrate()
         self.userInterface()
     def automate(self):
         self.calibrate()
@@ -235,35 +251,7 @@ class RobotClaw(Robot):
         self.raiseClaw()
         wait(1000)
 
-class RobotCalibrate(Robot):
-    def calibrate(self):
-        RobotCalibrate.resetVertical(self)
-        RobotCalibrate.resetAll(self)
-        
-        self.CLAWRESISTANCE = RobotMotors.meassureResistance(self, clawMotor)
-        RobotClaw.openClaw(self)
-        self.VERTICALRESISTANCE = RobotMotors.meassureResistance(self, verticalMotor)
-        RobotClaw.raiseClaw(self)
-        RobotClaw.closeClaw(self)
-    
-    def calinrateZones():
-        zonelst = ["Pickup Zone", "Drop off Zone 1","Drop off Zone 2", "Drop off Zone 3" ]
-        for index, i in enumerate(zonelst):
-            ev3.screen.draw_text(40, 50,i)
-            while not ev3.buttons.pressed()[0] == Button.CENTER:
-                pressedButton = ev3.buttons.pressed()[0]
-                if pressedButton == Button.UP:
-                    verticalMotor.run_angle(100, 10)
-                elif pressedButton == Button.DOWN:
-                    verticalMotor.run_angle(100,-10)
-                elif pressedButton == Button.RIGHT:
-                    horizontalMotor.run_angle(100,10)
-                elif pressedButton == Button.LEFT:
-                    horizontalMotor.run_angle(100,-10)
-            zonelst[index] = ()
-
-        
-
+class RobotReset(Robot):
     def resetHorizontal(self):
         while not touchSensor.pressed():
             RobotMotors.moveByGivenMotorAngle(self, horizontalMotor, 5.0, 500)
@@ -279,12 +267,12 @@ class RobotCalibrate(Robot):
 
     def resetAll(self):
         RobotClaw.closeClaw(self)
-        RobotCalibrate.resetHorizontal(self)
-        RobotCalibrate.resetVertical(self)
+        RobotReset.resetHorizontal(self)
+        RobotReset.resetVertical(self)
 
     def exitProgram(self):
         RobotClaw.closeClaw(self)
-        RobotCalibrate.resetAll(self)
+        RobotReset.resetAll(self)
         os._exit(0)
 
 robot = Robot()
