@@ -67,6 +67,7 @@ class Robot(object):
             print("5: Find color")
             print("6: Move to degree")
             print("7: Check if a item is being held")
+            print("8: Sort Color")
             print("0: Exit")
 
             answer = input(": ")
@@ -90,6 +91,8 @@ class Robot(object):
             elif answer == "7":
                 isHolding = RobotClaw.isHoldingItem(self)
                 print("Item is being held: " + str(isHolding))
+            elif answer == "8":
+                RobotSorting.colorZoneSorting(self)
             elif answer == "0":
                 RobotReset.exitProgram(self)
     
@@ -170,7 +173,7 @@ class RobotClaw(Robot):
         """
         Raise claw on the vertical axis to motor angle of the color sensor
         """
-        verticalMotor.run_target(100, -210.0)
+        verticalMotor.run_target(100, -230.0)
 
     def lowerClaw(self):
         """
@@ -192,7 +195,7 @@ class RobotClaw(Robot):
         """
         Close claw by running the claw motor until stalled and then resetting the angle to 0
         """
-        clawMotor.run_target(50, 0.0)
+        clawMotor.run_until_stalled(200)
         clawMotor.hold()
         self.clawVerticalAngle = 0.0
         clawMotor.reset_angle(0.0)
@@ -218,21 +221,21 @@ class RobotClaw(Robot):
         #return isHolding
 
     def pickupItem(self):
-        self.openClaw()
+        RobotClaw.openClaw(self)
         wait(1000)
-        self.lowerClaw()
+        RobotClaw.lowerClaw(self)
         wait(1000)
-        self.closeClaw()
+        RobotClaw.closeClaw(self)
         wait(1000)
-        self.raiseClaw()
+        RobotClaw.raiseClaw(self)
         wait(1000)
 
     def dropOffItem(self):
-        self.lowerClaw()
+        RobotClaw.lowerClaw(self)
         wait(1000)
-        self.openClaw()
+        RobotClaw.openClaw(self)
         wait(1000)
-        self.raiseClaw()
+        RobotClaw.raiseClaw(self)
         wait(1000)
 
 class RobotReset(Robot):
@@ -265,16 +268,17 @@ class RobotSorting(Robot):
     count = 0
     
     def colorZoneSorting(self):
-        horizontalMotor.run_target(200,RobotSorting.positionList[0])
+        RobotMotors.moveToGivenDegree(self,horizontalMotor,RobotSorting.positionList[0])
         RobotClaw.pickupItem(self)
         color = Robot.findColor(self)
+        print(color)
     
         if color not in RobotSorting.colorDict and RobotSorting.count<3:
             RobotSorting.colorDict[color] = RobotSorting.positionList[RobotSorting.count+1]  #+1 för första element är pickupZone
             RobotSorting.count +=1
         if color in RobotSorting.colorDict:
             position = RobotSorting.colorDict[color]
-            horizontalMotor.run_target(200,position)
+            RobotMotors.moveToGivenDegree(self,horizontalMotor,position)
  
         RobotClaw.dropOffItem(self)
 
