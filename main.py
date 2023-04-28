@@ -62,6 +62,7 @@ class Robot(object):
     def calibrateZones(self):
         namelst = [("Pickup Zone",Color.RED),( "Drop off Zone 1",Color.GREEN), ("Drop off Zone 2",Color.BROWN),( "Drop off Zone 3",Color.YELLOW) ]
         zonelst = []
+        RobotClaw.openClaw()
         for i in namelst:
             ev3.light.on(i[1])
             ev3.screen.draw_text(20, 50, i[0])
