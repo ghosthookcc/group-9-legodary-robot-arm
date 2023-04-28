@@ -6,6 +6,9 @@ from pybricks.parameters import Port, Stop, Direction, Button, Color
 from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
+from pybricks.messaging import BluetoothMailboxServer, BluetoothMailboxClient, TextMailbox
+
+from enum import Enum
 
 import os
 import time
@@ -29,6 +32,11 @@ HORIZONTALMOTORHALFANGLE = 360.0
 CLAWMAXHORIZONTALANGLE = 180.0
 
 class Robot(object):
+    class State(Enum):
+        IDLE = 0
+        MOVING = 1
+        GRABBING = 2
+
     def __init__(self):
         self.robotHorizontalMotorAngle = 0.0 
         self.clawVerticalAngle = 0.0
@@ -36,6 +44,7 @@ class Robot(object):
         self.CLAWRESISTANCE = 0.0
         self.VERTICALRESISTANCE = 0.0
         self.rotationScale = None
+        self.currentState = self.State.IDLE
 
     def findColor(self):
         return colorSensor.color()
@@ -268,24 +277,65 @@ class RobotSorting(Robot):
     count = 0
     
     def colorZoneSorting(self):
-        RobotMotors.moveToGivenDegree(self,horizontalMotor,RobotSorting.positionList[0])
+        RobotMotors.moveToGivenDegree(self,horizontalMotor,self.positionList[0])
         RobotClaw.pickupItem(self)
         color = Robot.findColor(self)
         print(color)
     
-        if color not in RobotSorting.colorDict and RobotSorting.count<3:
-            RobotSorting.colorDict[color] = RobotSorting.positionList[RobotSorting.count+1]  #+1 för första element är pickupZone
-            RobotSorting.count +=1
-        if color in RobotSorting.colorDict:
-            position = RobotSorting.colorDict[color]
+        if color not in self.colorDict and self.count<3:
+            self.colorDict[color] = self.positionList[self.count+1]  #+1 för första element är pickupZone
+            self.count +=1
+        if color in self.colorDict:
+            position = self.colorDict[color]
             RobotMotors.moveToGivenDegree(self,horizontalMotor,position)
  
         RobotClaw.dropOffItem(self)
+    
+class Communication(Robot): #håll koll på vilket stadie roboten är i just nu
+    Instance = None
+    # serverName = "ev3dev"
+    def __init__(self, serverName):
+        self.SERVER = serverName
+        self.initiate(self)
+    
+    def getInstance(self):
+        if (self.Instance == None):
+            self.Instance = self
+        return self.Instance
+
+    def initiate(self):
+        self.getInstance()
+
+class Server(Communication):
+    def initiate(self):
+        super().initiate()
+        self.Instance = BluetoothMailboxServer()       
+        mbox = TextMailbox("greeting", self.Instance)
+        print("[/] Waiting for connection...")
+        self.Instance.wait_for_connection()
+        print("[+] Connected!")
+        mbox.wait()
+        print(mbox.read())
+        mbox.send("[+] hello to you!")
+            
+class Client(Communication):   
+    def initiate(self):
+        super().initiate()
+        self.Instance = BluetoothMailboxClient()
+        mbox = TextMailbox('greeting', self.Instance)
+        print('[/] establishing connection...')
+        self.Instance.connect(self.SERVER)
+        print('[+] Connected!')
+        mbox.send('[+] hello!')
+        mbox.wait()
+        print(mbox.read())
+
 
 robot = Robot()
 
 def main():
-    robot.manual()
+    #robot.manual()
+    pass
 
 if __name__ == "__main__":
     main()
