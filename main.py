@@ -8,7 +8,7 @@ from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 from pybricks.messaging import BluetoothMailboxServer, BluetoothMailboxClient, TextMailbox
 
-from enum import Enum
+#from enum import Enum
 
 import os
 import time
@@ -32,10 +32,10 @@ HORIZONTALMOTORHALFANGLE = 360.0
 CLAWMAXHORIZONTALANGLE = 180.0
 
 class Robot(object):
-    class State(Enum):
-        IDLE = 0
-        MOVING = 1
-        GRABBING = 2
+    #class State(Enum):
+    #    IDLE = 0
+    #    MOVING = 1
+    #    GRABBING = 2
 
     def __init__(self):
         self.robotHorizontalMotorAngle = 0.0 
@@ -44,7 +44,8 @@ class Robot(object):
         self.CLAWRESISTANCE = 0.0
         self.VERTICALRESISTANCE = 0.0
         self.rotationScale = None
-        self.currentState = self.State.IDLE
+        #self.currentState = self.State.IDLE
+        self.zones = [(90,0),(0,0),(-45,0),(-90,0)]
 
     def findColor(self):
         return colorSensor.color()
@@ -79,6 +80,22 @@ class Robot(object):
             print("8: Sort Color")
             print("0: Exit")
 
+                    
+            #sorc = input("1 for server, 2 for client: ")
+            #if sorc == "1":
+            #    network = Server()
+            #elif sorc == "2":
+            #    network = Client()
+            #else:
+            #    print("No")
+
+            #network.initiate(network)
+
+            #while True:
+            
+             #   network.currentState
+              #  wait(5000)
+            
             answer = input(": ")
             if answer == "1":
                 RobotClaw.raiseClaw(self)
@@ -273,23 +290,27 @@ class RobotReset(Robot):
     
 class RobotSorting(Robot):
     colorDict = {}
-    positionList = [90,0,-45,-90]   #dessa värden kan ändras till olika positions
+    positionList = [] #dessa värden kan ändras till olika positions
+    
     count = 0
     
     def colorZoneSorting(self):
-        RobotMotors.moveToGivenDegree(self,horizontalMotor,self.positionList[0])
+        RobotSorting.positionList = self.zones
+        RobotMotors.moveToGivenDegree(self,verticalMotor,RobotMotors.angleToDegrees(self,RobotSorting.positionList[0][1])-50)    #emil check this out hahha
+        RobotMotors.moveToGivenDegree(self,horizontalMotor,RobotMotors.angleToDegrees(self,RobotSorting.positionList[0][0]))    #pickupLocation
         RobotClaw.pickupItem(self)
         color = Robot.findColor(self)
         print(color)
     
-        if color not in self.colorDict and self.count<3:
-            self.colorDict[color] = self.positionList[self.count+1]  #+1 för första element är pickupZone
-            self.count +=1
-        if color in self.colorDict:
-            position = self.colorDict[color]
-            RobotMotors.moveToGivenDegree(self,horizontalMotor,position)
+        if color not in RobotSorting.colorDict and RobotSorting.count<3:
+            RobotSorting.colorDict[color] = RobotSorting.positionList[RobotSorting.count+1]  #+1 för första element är pickupZone
+            RobotSorting.count +=1
+        if color in RobotSorting.colorDict:
+            position = RobotSorting.colorDict[color]
+            RobotMotors.moveToGivenDegree(self,horizontalMotor,position[0])
  
         RobotClaw.dropOffItem(self)
+        #RobotClaw.dropOffItem(self,position[1]) //how it should be with its y-coordinate
     
 class Communication(Robot): #håll koll på vilket stadie roboten är i just nu
     Instance = None
@@ -318,7 +339,7 @@ class Server(Communication):
         print(mbox.read())
         mbox.send("[+] hello to you!")
             
-class Client(Communication):   
+class Client(Communication):
     def initiate(self):
         super().initiate()
         self.Instance = BluetoothMailboxClient()
@@ -334,8 +355,10 @@ class Client(Communication):
 robot = Robot()
 
 def main():
-    #robot.manual()
-    pass
+    robot.manual()
+    #while True:
+    #    wait(5000)
+    #    RobotSorting.colorZoneSorting()
 
 if __name__ == "__main__":
     main()
