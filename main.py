@@ -36,6 +36,7 @@ class Robot(object):
         self.CLAWRESISTANCE = 0.0
         self.VERTICALRESISTANCE = 0.0
         self.rotationScale = None
+        self.zones = []
 
     def findColor(self):
         return colorSensor.color()
@@ -50,27 +51,38 @@ class Robot(object):
 
         RobotClaw.openClaw(self)
         self.CLAWRESISTANCE = RobotMotors.meassureResistance(self, clawMotor)
+        RobotClaw.closeClaw(self)
         RobotClaw.openClaw(self)
         self.VERTICALRESISTANCE = RobotMotors.meassureResistance(self, verticalMotor)
 
         RobotClaw.raiseClaw(self)
         RobotClaw.closeClaw(self)
+        self.zones = Robot.calibrateZones(self)
     
-    def calinrateZones():
-        zonelst = ["Pickup Zone", "Drop off Zone 1","Drop off Zone 2", "Drop off Zone 3" ]
-        for index, i in enumerate(zonelst):
-            ev3.screen.draw_text(40, 50,i)
-            while not ev3.buttons.pressed()[0] == Button.CENTER:
-                pressedButton = ev3.buttons.pressed()[0]
-                if pressedButton == Button.UP:
-                    verticalMotor.run_angle(100, 10)
-                elif pressedButton == Button.DOWN:
-                    verticalMotor.run_angle(100,-10)
-                elif pressedButton == Button.RIGHT:
-                    horizontalMotor.run_angle(100,10)
-                elif pressedButton == Button.LEFT:
-                    horizontalMotor.run_angle(100,-10)
-            zonelst[index] = ()
+    def calibrateZones(self):
+        namelst = [("Pickup Zone",Color.RED),( "Drop off Zone 1",Color.GREEN), ("Drop off Zone 2",Color.BROWN),( "Drop off Zone 3",Color.YELLOW) ]
+        zonelst = []
+        for i in namelst:
+            ev3.light.on(i[1])
+            ev3.screen.draw_text(20, 50, i[0])
+            wait(500)
+            while True:
+                pressedButtons = ev3.buttons.pressed()
+                if len(pressedButtons) > 0:
+                    if pressedButtons[0] == Button.CENTER:
+                        break
+                    elif pressedButtons[0] == Button.UP:
+                        RobotMotors.moveByGivenMotorAngle(self,verticalMotor, -10)
+                    elif pressedButtons[0] == Button.DOWN:
+                        RobotMotors.moveByGivenMotorAngle(self,verticalMotor, 10)
+                    elif pressedButtons[0] == Button.RIGHT:
+                        RobotMotors.moveByGivenMotorAngle(self,horizontalMotor, 10)
+                    elif pressedButtons[0] == Button.LEFT:
+                        RobotMotors.moveByGivenMotorAngle(self,horizontalMotor, -10)
+            zonelst.append((self.robotHorizontalMotorAngle, self.robotVerticalMotorAngle))
+            ev3.screen.clear()
+        ev3.light.off()
+        return zonelst
 
     def userInterface(self):
         while True:
