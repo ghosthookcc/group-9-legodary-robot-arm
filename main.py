@@ -31,7 +31,7 @@ CLAWMAXHORIZONTALANGLE = 180.0
 class Robot(object):
     def __init__(self):
         self.robotHorizontalMotorAngle = 0.0 
-        self.clawVerticalAngle = 0.0
+        self.robotClawMotorAngle = 0.0
         self.robotVerticalMotorAngle = 0.0
         self.CLAWRESISTANCE = 0.0
         self.VERTICALRESISTANCE = 0.0
@@ -46,10 +46,11 @@ class Robot(object):
 
         clawMotor.run_until_stalled(100)
         clawMotor.reset_angle(0.0)
-        self.clawVerticalAngle = 0.0
+        self.robotClawMotorAngle = 0.0
 
         RobotClaw.openClaw(self)
         self.CLAWRESISTANCE = RobotMotors.meassureResistance(self, clawMotor)
+        RobotClaw.closeClaw(self)
         RobotClaw.openClaw(self)
         self.VERTICALRESISTANCE = RobotMotors.meassureResistance(self, verticalMotor)
 
@@ -58,6 +59,7 @@ class Robot(object):
 
     def userInterface(self):
         while True:
+            input(": Press enter :")
             #input(": Press any key :")
             os.system("clear")
             print("1: Raise Claw")
@@ -129,13 +131,16 @@ class RobotMotors(Robot):
             self.robotHorizontalMotorAngle += motorAngle
         elif (motor == verticalMotor):
             self.robotVerticalMotorAngle += motorAngle
+        elif (motor == clawMotor):
+            self.robotClawMotorAngle += motorAngle
         motor.run_angle(speed, motorAngle)
-    def moveByGivenDegree(self, motor, motorDegree: float):
+    def moveByGivenDegree(self, motor, motorDegree: float, speed: int = 200):
         """
         Raise claw to sensor height and then convert input degrees to a motor angle,
         then move the horizontal motor by the motor angle.
         [Required] motor
         [Required] degree
+        [Optional] speed
         """
         motorAngle = RobotMotors.degreeToMotorAngle(self, motorDegree)
 
@@ -144,19 +149,23 @@ class RobotMotors(Robot):
             self.robotHorizontalMotorAngle += motorAngle
         elif (motor == verticalMotor):
             self.robotVerticalMotorAngle += motorAngle
-        horizontalMotor.run_angle(200, motorAngle)
-    def moveToGivenDegree(self, motor, motorDegree: float):
+        elif (motor == clawMotor):
+            self.robotClawMotorAngle += motorAngle
+        motor.run_angle(speed, motorAngle)
+    def moveToGivenDegree(self, motor, motorDegree: float, speed: int = 200):
         """
         Raise claw to sensor height and then convert input degrees to a motor angle,
         then reset the motor to its origin (0 degrees) and rotate to the new degrees,
         degrees is between -90 to 90 degrees from the origin.
         [Required] motor
         [Required] degree from origin
+        [Optional] speed
         """
+
         motor.run_target(150, 0.0)
         moveMotorAngle = RobotMotors.degreeToMotorAngle(self, motorDegree)
 
-        RobotMotors.moveByGivenMotorAngle(self, motor, moveMotorAngle)
+        RobotMotors.moveByGivenMotorAngle(self, motor, moveMotorAngle, speed)
     
     def meassureResistance(self, motor):
         """
@@ -182,40 +191,33 @@ class RobotClaw(Robot):
         """
         Open claw if the value is not bigger than the max claw motor angle
         """
-        newAngle = self.clawVerticalAngle - CLAWOPENANGLE
+        newAngle = self.robotClawMotorAngle - CLAWOPENANGLE
         if (newAngle >= -CLAWMAXVERTICALANGLE):
-            self.clawVerticalAngle = newAngle
+            self.robotClawMotorAngle = newAngle
             clawMotor.stop()
-            clawMotor.run_target(300, -CLAWOPENANGLE)
+            clawMotor.run_target(200, -CLAWOPENANGLE)
 
     def closeClaw(self):
         """
         Close claw by running the claw motor until stalled and then resetting the angle to 0
         """
-        clawMotor.run_target(50, 0.0)
-        clawMotor.hold()
-        self.clawVerticalAngle = 0.0
+        isHolding = RobotClaw.isHoldingItem(self)
+        if not isHolding:
+            clawMotor.stop()
+            clawMotor.run_target(200, 0.0)
+        self.robotClawMotorAngle = 0.0
         clawMotor.reset_angle(0.0)
 
     def isHoldingItem(self) -> bool:
         isHolding = False
         t_end = time.time() + 3.0
-        stepping = self.clawVerticalAngle / 5.0
-        while (-90.0 <= self.clawVerticalAngle <= 90.0):
-            print(self.clawVerticalAngle)
+        while not (clawMotor.stalled() and clawMotor.angle() != 0.0):
             if (time.time() > t_end):
-                isHolding = True
+                if (clawMotor.angle() <= -16.0):
+                    isHolding = True
                 break
-            self.clawVerticalAngle += stepping
-            clawMotor.run_target(100, self.clawVerticalAngle)
+            clawMotor.run_time(200, 100, Stop.HOLD)
         return isHolding
-
-        #isHolding = False
-        #resistance = RobotMotors.meassureResistance(self, clawMotor)
-        #print(str(resistance) + " : " + str(self.ITEMRESISTANCE) + " : " + str(self.CLAWRESISTANCE))
-        #if self.ITEMRESISTANCE-8 <= resistance <= self.ITEMRESISTANCE+8:
-        #    isHolding = True
-        #return isHolding
 
     def pickupItem(self):
         self.openClaw()
@@ -256,7 +258,8 @@ class RobotReset(Robot):
 
     def exitProgram(self):
         RobotClaw.closeClaw(self)
-        RobotReset.resetAll(self)
+        RobotMotors.moveToGivenDegree(self, horizontalMotor, 0.0)
+        RobotReset.resetVertical(self)
         os._exit(0)
 
 robot = Robot()
