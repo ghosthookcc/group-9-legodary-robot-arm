@@ -52,7 +52,20 @@ class Robot(object):
         self.count = 0
 
     def findColor(self):
-        return colorSensor.color()
+        ev3.screen.clear()
+        color = colorSensor.color()
+        message = None
+        if color == Color.BLUE:
+            message = "Blue"
+        elif color == Color.RED:
+            message = "Red"
+        elif color == Color.GREEN:
+            message = "Green"
+        elif color == Color.YELLOW:
+            message == "Yellow"
+        ev3.screen.draw_text(20,50,message)
+        return color
+    
 
     def calibrate(self):
         RobotReset.resetVertical(self)
@@ -75,7 +88,7 @@ class Robot(object):
         self.positionList = self.zones[1:]
     
     def calibrateZones(self):
-        namelst = [("Pickup Zone",Color.RED),( "Drop off Zone 1",Color.GREEN), ("Drop off Zone 2",Color.BROWN),( "Drop off Zone 3",Color.YELLOW) ]
+        namelst = [("Pickup Zone",Color.RED),( "Drop off Zone 1",Color.GREEN),( "Drop off Zone 2",Color.YELLOW) ]
         zonelst = []
         RobotClaw.openClaw(self)
         for i in namelst:
@@ -95,7 +108,7 @@ class Robot(object):
                         RobotMotors.moveByGivenMotorAngle(self,horizontalMotor, 10)
                     elif pressedButtons[0] == Button.LEFT:
                         RobotMotors.moveByGivenMotorAngle(self,horizontalMotor, -10)
-            zonelst.append((RobotMotors.angleToDegrees(self,self.robotHorizontalMotorAngle), RobotMotors.angleToDegrees(self,self.robotVerticalMotorAngle)))
+            zonelst.append((RobotMotors.angleToDegrees(self,self.robotHorizontalMotorAngle), self.robotVerticalMotorAngle))
             ev3.screen.clear()
         ev3.light.off()
         return zonelst
@@ -163,17 +176,8 @@ class Robot(object):
     def automate(self):
         self.calibrate()
         while True:
-            ev3.light.off()
-            RobotClaw.pickupItem(self)
-            color = self.findColor(self)
-            ev3.light.on(color)
-            if (color == Color.RED or 
-                color == Color.BLUE or
-                color == Color.GREEN or
-                color == Color.YELLOW):
-                while not (ev3.buttons.pressed()):
-                    pass
-            RobotClaw.dropOffItem(self)
+            wait(5000)
+            RobotSorting.colorZoneSorting(self)
 
 class RobotMotors(Robot):
     def angleToDegrees(self, angle: float) -> float:
@@ -277,6 +281,7 @@ class RobotClaw(Robot):
             clawMotor.run_target(200, 0.0)
         self.robotClawMotorAngle = 0.0
         clawMotor.reset_angle(0.0)
+        return isHolding
 
     def isHoldingItem(self) -> bool:
         isHolding = False
@@ -338,27 +343,30 @@ class RobotSorting(Robot):
         print(self.positionList)
         RobotMotors.moveToGivenDegree(self,verticalMotor,-90)
         RobotMotors.moveToGivenDegree(self,horizontalMotor,self.pickupzone[0])   #pickupLocation
+        RobotClaw.openClaw(self)
         RobotClaw.lowerClaw(self)
         #RobotMotors.moveToGivenDegree(self,verticalMotor,self.pickupzone[1])
-        RobotClaw.closeClaw(self)
-        RobotClaw.raiseClaw(self)
-        color = Robot.findColor(self)
-        print(color)
-    
-        if color not in self.colorDict and self.count<3:
-            self.colorDict[color] = self.positionList[self.count]  #+1 för första element är pickupZone
-            self.count +=1
-        if color in self.colorDict:
-            position = self.colorDict[color]
-            print(position)
-            #RobotMotors.moveToGivenDegree(self,verticalMotor, -90)
-            RobotMotors.moveToGivenDegree(self,horizontalMotor,position[0])
-            RobotClaw.lowerClaw(self)
-            #RobotMotors.moveToGivenDegree(self,verticalMotor,position[1])
-            RobotClaw.openClaw(self)
-        else:
-            RobotClaw.openClaw(self)
-        #RobotClaw.dropOffItem(self,position[1]) //how it should be with its y-coordinate
+        holding = RobotClaw.closeClaw(self)
+        if holding:
+            RobotClaw.raiseClaw(self)
+            color = Robot.findColor(self)
+            print(color)
+        
+            if color not in self.colorDict and self.count<2:
+                self.colorDict[color] = self.positionList[self.count]  #+1 för första element är pickupZone
+                self.count +=1
+            if color in self.colorDict:
+                position = self.colorDict[color]
+                print(position)
+                #RobotMotors.moveToGivenDegree(self,verticalMotor, -90)
+                RobotMotors.moveToGivenDegree(self,horizontalMotor,position[0])
+                RobotClaw.lowerClaw(self)
+                #RobotMotors.moveToGivenDegree(self,verticalMotor,position[1])
+                RobotClaw.openClaw(self)
+            else:
+                RobotClaw.lowerClaw(self) # TEST
+                RobotClaw.openClaw(self)
+            #RobotClaw.dropOffItem(self,position[1]) //how it should be with its y-coordinate
     
 class Communication(Robot): #håll koll på vilket stadie roboten är i just nu
     Instance = None
@@ -403,7 +411,8 @@ class Client(Communication):
 robot = Robot()
 
 def main():
-    robot.manual()
+    robot.automate()
+    #robot.manual()
     #while True:
     #    wait(5000)
     #    RobotSorting.colorZoneSorting()
