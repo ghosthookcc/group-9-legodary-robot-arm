@@ -6,9 +6,9 @@ from pybricks.parameters import Port, Stop, Direction, Button, Color
 from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
-from pybricks.messaging import BluetoothMailboxServer, BluetoothMailboxClient, TextMailbox
+from pybricks.messaging import BluetoothMailboxServer, BluetoothMailboxClient, TextMailbox, LogicMailbox
+from enum import Enum
 
-#from enum import Enum
 
 import os
 import time
@@ -36,6 +36,10 @@ class Robot(object):
     #    IDLE = 0
     #    MOVING = 1
     #    GRABBING = 2
+
+    class States(Enum):
+        IDLE = 0
+        WORKING = 1
 
     def __init__(self):
         self.robotHorizontalMotorAngle = 0.0 
@@ -125,6 +129,7 @@ class Robot(object):
     def manual(self):
         self.calibrate()
         self.userInterface()
+
     def automate(self):
         self.calibrate()
         while True:
@@ -327,38 +332,46 @@ class Communication(Robot): #håll koll på vilket stadie roboten är i just nu
     def initiate(self):
         self.getInstance()
 
+    
+
 class Server(Communication):
     def initiate(self):
         super().initiate()
         self.Instance = BluetoothMailboxServer()       
         mbox = TextMailbox("greeting", self.Instance)
         print("[/] Waiting for connection...")
-        self.Instance.wait_for_connection()
+        self.Instance.wait_for_connection(count=1)
         print("[+] Connected!")
         mbox.wait()
+
         print(mbox.read())
         mbox.send("[+] hello to you!")
-            
+    
 class Client(Communication):
     def initiate(self):
         super().initiate()
         self.Instance = BluetoothMailboxClient()
         mbox = TextMailbox('greeting', self.Instance)
         print('[/] establishing connection...')
+
         self.Instance.connect(self.SERVER)
+
         print('[+] Connected!')
         mbox.send('[+] hello!')
         mbox.wait()
         print(mbox.read())
 
+        testbox = LogicMailbox("currentState",self.Instance)
+        testbox.send(False)
 
 robot = Robot()
 
 def main():
     robot.manual()
-    #while True:
+    while True:
     #    wait(5000)
     #    RobotSorting.colorZoneSorting()
+        Communication.updateState()
 
 if __name__ == "__main__":
     main()
