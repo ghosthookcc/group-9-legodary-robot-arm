@@ -6,8 +6,12 @@ from pybricks.parameters import Port, Stop, Direction, Button, Color
 from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
+from pybricks.messaging import BluetoothMailboxServer, BluetoothMailboxClient, TextMailbox
+
+#from enum import Enum
 
 import os
+import time
 import time
 
 ev3 = EV3Brick()
@@ -29,6 +33,11 @@ HORIZONTALMOTORHALFANGLE = 360.0
 CLAWMAXHORIZONTALANGLE = 180.0
 
 class Robot(object):
+    #class State(Enum):
+    #    IDLE = 0
+    #    MOVING = 1
+    #    GRABBING = 2
+
     def __init__(self):
         self.robotHorizontalMotorAngle = 0.0 
         self.robotClawMotorAngle = 0.0
@@ -36,9 +45,27 @@ class Robot(object):
         self.CLAWRESISTANCE = 0.0
         self.VERTICALRESISTANCE = 0.0
         self.rotationScale = None
+        self.zones = []
+        self.colorDict = {}
+        self.pickupzone = ()
+        self.positionList = []
+        self.count = 0
 
     def findColor(self):
-        return colorSensor.color()
+        ev3.screen.clear()
+        color = colorSensor.color()
+        message = None
+        if color == Color.BLUE:
+            message = "Blue"
+        elif color == Color.RED:
+            message = "Red"
+        elif color == Color.GREEN:
+            message = "Green"
+        elif color == Color.YELLOW:
+            message == "Yellow"
+        ev3.screen.draw_text(20,50,message)
+        return color
+    
 
     def calibrate(self):
         RobotReset.resetVertical(self)
@@ -56,6 +83,35 @@ class Robot(object):
 
         RobotClaw.raiseClaw(self)
         RobotClaw.closeClaw(self)
+        self.zones = Robot.calibrateZones(self)
+        self.pickupzone = self.zones[0]
+        self.positionList = self.zones[1:]
+    
+    def calibrateZones(self):
+        namelst = [("Pickup Zone",Color.RED),( "Drop off Zone 1",Color.GREEN),( "Drop off Zone 2",Color.YELLOW) ]
+        zonelst = []
+        RobotClaw.openClaw(self)
+        for i in namelst:
+            ev3.light.on(i[1])
+            ev3.screen.draw_text(20, 50, i[0])
+            wait(500)
+            while True:
+                pressedButtons = ev3.buttons.pressed()
+                if len(pressedButtons) > 0:
+                    if pressedButtons[0] == Button.CENTER:
+                        break
+                    elif pressedButtons[0] == Button.UP:
+                        RobotMotors.moveByGivenMotorAngle(self,verticalMotor, -10)
+                    elif pressedButtons[0] == Button.DOWN:
+                        RobotMotors.moveByGivenMotorAngle(self,verticalMotor, 10)
+                    elif pressedButtons[0] == Button.RIGHT:
+                        RobotMotors.moveByGivenMotorAngle(self,horizontalMotor, 10)
+                    elif pressedButtons[0] == Button.LEFT:
+                        RobotMotors.moveByGivenMotorAngle(self,horizontalMotor, -10)
+            zonelst.append((RobotMotors.angleToDegrees(self,self.robotHorizontalMotorAngle), self.robotVerticalMotorAngle))
+            ev3.screen.clear()
+        ev3.light.off()
+        return zonelst
 
     def userInterface(self):
         while True:
@@ -69,8 +125,25 @@ class Robot(object):
             print("5: Find color")
             print("6: Move to degree")
             print("7: Check if a item is being held")
+            print("8: Sort Color")
             print("0: Exit")
 
+                    
+            #sorc = input("1 for server, 2 for client: ")
+            #if sorc == "1":
+            #    network = Server()
+            #elif sorc == "2":
+            #    network = Client()
+            #else:
+            #    print("No")
+
+            #network.initiate(network)
+
+            #while True:
+            
+             #   network.currentState
+              #  wait(5000)
+            
             answer = input(": ")
             if answer == "1":
                 RobotClaw.raiseClaw(self)
@@ -92,6 +165,8 @@ class Robot(object):
             elif answer == "7":
                 isHolding = RobotClaw.isHoldingItem(self)
                 print("Item is being held: " + str(isHolding))
+            elif answer == "8":
+                RobotSorting.colorZoneSorting(self)
             elif answer == "0":
                 RobotReset.exitProgram(self)
     
@@ -101,17 +176,8 @@ class Robot(object):
     def automate(self):
         self.calibrate()
         while True:
-            ev3.light.off()
-            RobotClaw.pickupItem(self)
-            color = self.findColor(self)
-            ev3.light.on(color)
-            if (color == Color.RED or 
-                color == Color.BLUE or
-                color == Color.GREEN or
-                color == Color.YELLOW):
-                while not (ev3.buttons.pressed()):
-                    pass
-            RobotClaw.dropOffItem(self)
+            wait(5000)
+            RobotSorting.colorZoneSorting(self)
 
 class RobotMotors(Robot):
     def angleToDegrees(self, angle: float) -> float:
@@ -163,6 +229,12 @@ class RobotMotors(Robot):
         """
 
         motor.run_target(150, 0.0)
+        if (motor == horizontalMotor):
+            self.robotHorizontalMotorAngle = 0.0
+        elif (motor == verticalMotor):
+            self.robotVerticalMotorAngle = 0.0
+        elif (motor == clawMotor):
+            self.robotClawMotorAngle = 0.0
         moveMotorAngle = RobotMotors.degreeToMotorAngle(self, motorDegree)
 
         RobotMotors.moveByGivenMotorAngle(self, motor, moveMotorAngle, speed)
@@ -179,12 +251,14 @@ class RobotClaw(Robot):
         """
         Raise claw on the vertical axis to motor angle of the color sensor
         """
-        verticalMotor.run_target(100, -210.0)
+        self.robotVerticalMotorAngle -=230
+        verticalMotor.run_target(100, -230.0)
 
     def lowerClaw(self):
         """
         Lower claw on vertical axis to default position after calibration
         """
+        self.robotVerticalMotorAngle = 0.0
         verticalMotor.run_target(100, 0.0)
 
     def openClaw(self):
@@ -207,6 +281,7 @@ class RobotClaw(Robot):
             clawMotor.run_target(200, 0.0)
         self.robotClawMotorAngle = 0.0
         clawMotor.reset_angle(0.0)
+        return isHolding
 
     def isHoldingItem(self) -> bool:
         isHolding = False
@@ -220,21 +295,21 @@ class RobotClaw(Robot):
         return isHolding
 
     def pickupItem(self):
-        self.openClaw()
+        RobotClaw.openClaw(self)
         wait(1000)
-        self.lowerClaw()
+        RobotClaw.lowerClaw(self)
         wait(1000)
-        self.closeClaw()
+        RobotClaw.closeClaw(self)
         wait(1000)
-        self.raiseClaw()
+        RobotClaw.raiseClaw(self)
         wait(1000)
 
     def dropOffItem(self):
-        self.lowerClaw()
+        RobotClaw.lowerClaw(self)
         wait(1000)
-        self.openClaw()
+        RobotClaw.openClaw(self)
         wait(1000)
-        self.raiseClaw()
+        RobotClaw.raiseClaw(self)
         wait(1000)
 
 class RobotReset(Robot):
@@ -261,11 +336,86 @@ class RobotReset(Robot):
         RobotMotors.moveToGivenDegree(self, horizontalMotor, 0.0)
         RobotReset.resetVertical(self)
         os._exit(0)
+    
+class RobotSorting(Robot):
+    def colorZoneSorting(self):
+        print(self.pickupzone)
+        print(self.positionList)
+        RobotMotors.moveToGivenDegree(self,verticalMotor,-90)
+        RobotMotors.moveToGivenDegree(self,horizontalMotor,self.pickupzone[0])   #pickupLocation
+        RobotClaw.openClaw(self)
+        RobotClaw.lowerClaw(self)
+        #RobotMotors.moveToGivenDegree(self,verticalMotor,self.pickupzone[1])
+        holding = RobotClaw.closeClaw(self)
+        if holding:
+            RobotClaw.raiseClaw(self)
+            color = Robot.findColor(self)
+            print(color)
+        
+            if color not in self.colorDict and self.count<2:
+                self.colorDict[color] = self.positionList[self.count]  #+1 för första element är pickupZone
+                self.count +=1
+            if color in self.colorDict:
+                position = self.colorDict[color]
+                print(position)
+                #RobotMotors.moveToGivenDegree(self,verticalMotor, -90)
+                RobotMotors.moveToGivenDegree(self,horizontalMotor,position[0])
+                RobotClaw.lowerClaw(self)
+                #RobotMotors.moveToGivenDegree(self,verticalMotor,position[1])
+                RobotClaw.openClaw(self)
+            else:
+                RobotClaw.lowerClaw(self) # TEST
+                RobotClaw.openClaw(self)
+            #RobotClaw.dropOffItem(self,position[1]) //how it should be with its y-coordinate
+    
+class Communication(Robot): #håll koll på vilket stadie roboten är i just nu
+    Instance = None
+    # serverName = "ev3dev"
+    def __init__(self, serverName):
+        self.SERVER = serverName
+        self.initiate(self)
+    
+    def getInstance(self):
+        if (self.Instance == None):
+            self.Instance = self
+        return self.Instance
+
+    def initiate(self):
+        self.getInstance()
+
+class Server(Communication):
+    def initiate(self):
+        super().initiate()
+        self.Instance = BluetoothMailboxServer()       
+        mbox = TextMailbox("greeting", self.Instance)
+        print("[/] Waiting for connection...")
+        self.Instance.wait_for_connection()
+        print("[+] Connected!")
+        mbox.wait()
+        print(mbox.read())
+        mbox.send("[+] hello to you!")
+            
+class Client(Communication):
+    def initiate(self):
+        super().initiate()
+        self.Instance = BluetoothMailboxClient()
+        mbox = TextMailbox('greeting', self.Instance)
+        print('[/] establishing connection...')
+        self.Instance.connect(self.SERVER)
+        print('[+] Connected!')
+        mbox.send('[+] hello!')
+        mbox.wait()
+        print(mbox.read())
+
 
 robot = Robot()
 
 def main():
-    robot.manual()
+    robot.automate()
+    #robot.manual()
+    #while True:
+    #    wait(5000)
+    #    RobotSorting.colorZoneSorting()
 
 if __name__ == "__main__":
     main()
