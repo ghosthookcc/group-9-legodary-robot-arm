@@ -33,11 +33,6 @@ HORIZONTALMOTORHALFANGLE = 360.0
 CLAWMAXHORIZONTALANGLE = 180.0
 
 class Robot(object):
-    #class State(Enum):
-    #    IDLE = 0
-    #    MOVING = 1
-    #    GRABBING = 2
-
     def __init__(self):
         self.robotHorizontalMotorAngle = 0.0 
         self.robotClawMotorAngle = 0.0
@@ -346,12 +341,10 @@ class RobotSorting(Robot):
         RobotMotors.moveToGivenDegree(self,horizontalMotor,self.pickupzone[0]) 
         RobotClaw.lowerClaw(self, self.pickupzone[1])
         RobotClaw.openClaw(self)
-        wait(5000)
         holding = RobotClaw.closeClaw(self)
         RobotClaw.raiseClaw(self, -90.0)
-        print("HOLDING: " + str(holding))
+        print("Holding: " + str(holding))
         if holding:
-            print("RAN THIS")
             RobotClaw.raiseClaw(self)
             color = Robot.findColor(self)
             print(color)
@@ -373,10 +366,9 @@ class RobotSorting(Robot):
 
 class Communication(Robot): #håll koll på vilket stadie roboten är i just nu
     Instance = None
-    # serverName = "ev3dev"
-    def __init__(self, serverName):
-        self.SERVER = serverName
-        self.initiate(self)
+    def __init__(self, connectionName):
+        self.connectionName = connectionName
+        self.initiate(self) # om initiate inte kör alla 3 iterationer av initiate kan ni ta bort kommentaren i init koden i deriverade klasser
     
     def getInstance(self):
         if (self.Instance == None):
@@ -387,10 +379,14 @@ class Communication(Robot): #håll koll på vilket stadie roboten är i just nu
         self.getInstance()
 
 class Server(Communication):
+    def __init__(self):
+        Communication.__init__(connectionName="ev3server")
+        #self.initiate(self)
+
     def initiate(self):
         super().initiate()
         self.Instance = BluetoothMailboxServer()       
-        mbox = TextMailbox("greeting", self.Instance)
+        mbox = TextMailbox("greeting", self.connectionName)
         print("[/] Waiting for connection...")
         self.Instance.wait_for_connection()
         print("[+] Connected!")
@@ -399,10 +395,14 @@ class Server(Communication):
         mbox.send("[+] hello to you!")
             
 class Client(Communication):
+    def __init__(self):
+        Communication.__init__(connectionName="ev3client")
+        #self.initiate(self)
+
     def initiate(self):
         super().initiate()
         self.Instance = BluetoothMailboxClient()
-        mbox = TextMailbox('greeting', self.Instance)
+        mbox = TextMailbox('greeting', self.connectionName)
         print('[/] establishing connection...')
         self.Instance.connect(self.SERVER)
         print('[+] Connected!')
@@ -415,10 +415,6 @@ robot = Robot()
 
 def main():
     robot.automate()
-    #robot.manual()
-    #while True:
-    #    wait(5000)
-    #    RobotSorting.colorZoneSorting()
 
 if __name__ == "__main__":
     main()
