@@ -7,9 +7,11 @@ from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 from pybricks.messaging import BluetoothMailboxServer, BluetoothMailboxClient, TextMailbox, LogicMailbox
+
+from threading import Thread
 from enum import Enum
 
-
+import sys
 import os
 import time
 
@@ -40,6 +42,7 @@ class Robot(object):
     class States(Enum):
         IDLE = 0
         WORKING = 1
+        EXITING = 2
 
     def __init__(self):
         self.robotHorizontalMotorAngle = 0.0 
@@ -48,7 +51,7 @@ class Robot(object):
         self.CLAWRESISTANCE = 0.0
         self.VERTICALRESISTANCE = 0.0
         self.rotationScale = None
-        #self.currentState = self.State.IDLE
+        self.state = self.States.IDLE
         self.zones = [(90,0),(0,0),(-45,0),(-90,0)]
 
     def findColor(self):
@@ -84,7 +87,6 @@ class Robot(object):
             print("8: Sort Color")
             print("0: Exit")
 
-                    
             #sorc = input("1 for server, 2 for client: ")
             #if sorc == "1":
             #    network = Server()
@@ -289,6 +291,7 @@ class RobotReset(Robot):
         RobotReset.resetVertical(self)
 
     def exitProgram(self):
+        self.state = self.States.EXITING
         RobotClaw.closeClaw(self)
         RobotReset.resetAll(self)
         os._exit(0)
@@ -300,30 +303,41 @@ class RobotSorting(Robot):
     count = 0
     
     def colorZoneSorting(self):
-        RobotSorting.positionList = self.zones
-        RobotMotors.moveToGivenDegree(self,verticalMotor,RobotMotors.angleToDegrees(self,RobotSorting.positionList[0][1])-50)    #emil check this out hahha
-        RobotMotors.moveToGivenDegree(self,horizontalMotor,RobotMotors.angleToDegrees(self,RobotSorting.positionList[0][0]))    #pickupLocation
-        RobotClaw.pickupItem(self)
-        color = Robot.findColor(self)
-        print(color)
+        if (self.state == self.States.WORKING):
+            RobotSorting.positionList = self.zones
+            RobotMotors.moveToGivenDegree(self,verticalMotor,RobotMotors.angleToDegrees(self,RobotSorting.positionList[0][1])-50)    #emil check this out hahha
+            RobotMotors.moveToGivenDegree(self,horizontalMotor,RobotMotors.angleToDegrees(self,RobotSorting.positionList[0][0]))    #pickupLocation
+            RobotClaw.pickupItem(self)
+            color = Robot.findColor(self)
+            print(color)
     
-        if color not in RobotSorting.colorDict and RobotSorting.count<3:
-            RobotSorting.colorDict[color] = RobotSorting.positionList[RobotSorting.count+1]  #+1 för första element är pickupZone
-            RobotSorting.count +=1
-        if color in RobotSorting.colorDict:
-            position = RobotSorting.colorDict[color]
-            RobotMotors.moveToGivenDegree(self,horizontalMotor,position[0])
+            if color not in RobotSorting.colorDict and RobotSorting.count<3:
+                RobotSorting.colorDict[color] = RobotSorting.positionList[RobotSorting.count+1]  #+1 för första element är pickupZone
+                RobotSorting.count +=1
+            if color in RobotSorting.colorDict:
+                position = RobotSorting.colorDict[color]
+                RobotMotors.moveToGivenDegree(self,horizontalMotor,position[0])
  
-        RobotClaw.dropOffItem(self)
+            RobotClaw.dropOffItem(self)
+        else:
+            RobotMotors.lowerClaw(self, -90.0)
+            RobotMotors.moveToGivenDegree(self, horizontalMotor, 0.0)
+        self.state = self.States.IDLE
         #RobotClaw.dropOffItem(self,position[1]) //how it should be with its y-coordinate
     
 class Communication(Robot): #håll koll på vilket stadie roboten är i just nu
     Instance = None
-    # serverName = "ev3dev"
-    def __init__(self, serverName):
-        self.SERVER = serverName
+    def __init__(self, connectionName):
+        self.connectionName = connectionName
+        self.mbox = None
+        self.lbox = None
         self.initiate(self)
-    
+
+    def main_loop(self):
+        while (self.state != self.States.EXITING):
+            self.UpdateState(self)
+            time.sleep(0.5)
+
     def getInstance(self):
         if (self.Instance == None):
             self.Instance = self
@@ -331,47 +345,61 @@ class Communication(Robot): #håll koll på vilket stadie roboten är i just nu
 
     def initiate(self):
         self.getInstance()
+        self.lbox = LogicMailbox("CurrentState",self.Instance)
 
-    
+    def UpdateState(self) -> bool:
+        isReady = True
+        if (self.state == self.States.WORKING):
+            isReady = False
+        if (self.state == self.States.IDLE):
+            self.lbox.send(True)
+        if (self.state == self.States.IDLE and self.lbox.read == True):
+            self.state = self.States.WORKING
+        return isReady
 
 class Server(Communication):
+    def __init__(self):
+        Communication.__init__(connectionName="ev3dev")
+        self.initiate(self)
+
     def initiate(self):
         super().initiate()
         self.Instance = BluetoothMailboxServer()       
-        mbox = TextMailbox("greeting", self.Instance)
+        mbox = TextMailbox(self.connectionName, self.Instance)
         print("[/] Waiting for connection...")
-        self.Instance.wait_for_connection(count=1)
+        self.Instance.wait_for_connection()
         print("[+] Connected!")
         mbox.wait()
-
         print(mbox.read())
         mbox.send("[+] hello to you!")
     
 class Client(Communication):
+    def __init__(self):
+        Communication.__init__(connectionName="ev3dev")
+        self.initiate(self)
+
     def initiate(self):
         super().initiate()
         self.Instance = BluetoothMailboxClient()
-        mbox = TextMailbox('greeting', self.Instance)
+        mbox = TextMailbox("ev3client", self.Instance)
         print('[/] establishing connection...')
-
-        self.Instance.connect(self.SERVER)
-
+        self.Instance.connect(self.connectionName)
         print('[+] Connected!')
         mbox.send('[+] hello!')
         mbox.wait()
         print(mbox.read())
-
-        testbox = LogicMailbox("currentState",self.Instance)
-        testbox.send(False)
-
+    
 robot = Robot()
 
 def main():
-    robot.manual()
-    while True:
-    #    wait(5000)
-    #    RobotSorting.colorZoneSorting()
-        Communication.updateState()
+    server = Server()
+    
+    communicationMainLoopThread = Thread(target=server.main_loop)
+    communicationMainLoopThread.daemon = False
+    communicationMainLoopThread.setName("StateObserver")
+    communicationMainLoopThread.start() 
+    
+    robot.automate()
 
 if __name__ == "__main__":
     main()
