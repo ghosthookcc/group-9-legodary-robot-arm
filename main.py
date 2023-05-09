@@ -359,7 +359,7 @@ class RobotSorting(Robot):
                 color = Robot.findColor(self)
                 print(color)
 
-                if color not in self.colorDict and self.count<2:
+                if color not in self.colorDict and self.count < 2:
                     self.colorDict[color] = self.positionList[self.count]  #+1 för första element är pickupZone
                     self.count +=1
                 if color in self.colorDict:
@@ -368,14 +368,8 @@ class RobotSorting(Robot):
                     RobotMotors.moveToGivenDegree(self,horizontalMotor,position[0])
                     RobotClaw.lowerClaw(self,position[1])
                     RobotClaw.openClaw(self)
-                else:
-                    RobotMotors.moveToGivenDegree(self,horizontalMotor,self.pickupzone[0])
-                    RobotClaw.lowerClaw(self,self.pickupzone[1]) # TEST
-                    RobotClaw.openClaw(self)
             else:
                 Communication.SendNewLogicState(self, False)
-                RobotMotors.lowerClaw(self, -90.0)
-                RobotMotors.moveToGivenDegree(self, horizontalMotor, 0.0)
         RobotClaw.raiseClaw(self, -90.0)
         RobotMotors.moveToGivenDegree(self, horizontalMotor, 0.0)
         self.state = self.States.IDLE
@@ -404,7 +398,8 @@ class Communication(Robot): #håll koll på vilket stadie roboten är i just nu
 
     def UpdateState(self) -> bool:
         isReady = True
-        if (self.lbox.read() == False): return 
+        if (self.lbox.read() == False): 
+            self.state = self.States.WAITING
         if (self.state == self.States.IDLE and self.lbox.read() == True):
             self.state = self.States.PICKUP
         if (self.state == self.States.SORTING):
