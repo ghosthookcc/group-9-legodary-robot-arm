@@ -14,7 +14,6 @@ from enum import Enum
 import sys
 import os
 import time
-import time
 
 ev3 = EV3Brick()
 
@@ -37,8 +36,10 @@ CLAWMAXHORIZONTALANGLE = 180.0
 class Robot(object):
     class States(Enum):
         IDLE = 0
-        WORKING = 1
-        EXITING = 2
+        PICKUP = 1
+        SORTING = 2
+        WAITING = 3
+        EXITING = 4
 
     def __init__(self):
         self.robotHorizontalMotorAngle = 0.0 
@@ -180,7 +181,6 @@ class Robot(object):
         while True:
             wait(5000)
             RobotSorting.colorZoneSorting(self)
-            
 
 class RobotMotors(Robot):
     def angleToDegrees(self, angle: float) -> float:
@@ -214,7 +214,6 @@ class RobotMotors(Robot):
         motorAngle = RobotMotors.degreeToMotorAngle(self, motorDegree)
 
         if (motor == horizontalMotor):
-            #RobotClaw.raiseClaw(self)
             self.robotHorizontalMotorAngle += motorAngle
         elif (motor == verticalMotor):
             self.robotVerticalMotorAngle += motorAngle
@@ -343,21 +342,23 @@ class RobotReset(Robot):
     
 class RobotSorting(Robot):
     def colorZoneSorting(self):
-        if (self.state == self.States.WORKING):
+        if (self.state == self.States.PICKUP):
             RobotClaw.raiseClaw(self, -90.0)
-            print(self.pickupzone)
-            print(self.positionList)
             RobotMotors.moveToGivenDegree(self,horizontalMotor,self.pickupzone[0]) 
             RobotClaw.lowerClaw(self, self.pickupzone[1])
             RobotClaw.openClaw(self)
             holding = RobotClaw.closeClaw(self)
-            RobotClaw.raiseClaw(self, -90.0)
+
+            self.state = self.States.SORTING
+
+            print(self.pickupzone)
+            print(self.positionList)
             print("Holding: " + str(holding))
             if holding:
                 RobotClaw.raiseClaw(self)
                 color = Robot.findColor(self)
                 print(color)
-        
+
                 if color not in self.colorDict and self.count<2:
                     self.colorDict[color] = self.positionList[self.count]  #+1 för första element är pickupZone
                     self.count +=1
@@ -372,9 +373,11 @@ class RobotSorting(Robot):
                     RobotClaw.lowerClaw(self,self.pickupzone[1]) # TEST
                     RobotClaw.openClaw(self)
             else:
+                Communication.SendNewLogicState(self, False)
                 RobotMotors.lowerClaw(self, -90.0)
                 RobotMotors.moveToGivenDegree(self, horizontalMotor, 0.0)
-        RobotClaw.raiseClaw(self, -90)
+        RobotClaw.raiseClaw(self, -90.0)
+        RobotMotors.moveToGivenDegree(self, horizontalMotor, 0.0)
         self.state = self.States.IDLE
 
 class Communication(Robot): #håll koll på vilket stadie roboten är i just nu
@@ -383,12 +386,12 @@ class Communication(Robot): #håll koll på vilket stadie roboten är i just nu
         self.connectionName = connectionName
         self.mbox = None
         self.lbox = None
-        self.initiate(self) # om initiate inte kör alla 3 iterationer av initiate kan ni ta bort kommentaren i init koden i deriverade klasser
+        self.initiate(self)
 
     def main_loop(self):
         while (self.state != self.States.EXITING):
             self.UpdateState(self)
-            time.sleep(0.5)
+            time.sleep(0.2)
 
     def getInstance(self):
         if (self.Instance == None):
@@ -401,18 +404,20 @@ class Communication(Robot): #håll koll på vilket stadie roboten är i just nu
 
     def UpdateState(self) -> bool:
         isReady = True
-        if (self.state == self.States.WORKING):
-            isReady = False
-        if (self.state == self.States.IDLE):
-            self.lbox.send(True)
+        if (self.lbox.read() == False): return 
         if (self.state == self.States.IDLE and self.lbox.read() == True):
-            self.state = self.States.WORKING
+            self.state = self.States.PICKUP
+        if (self.state == self.States.SORTING):
+            self.lbox.send(True)
         return isReady
+    
+    def SendNewLogicState(self: object, state: bool) -> None:
+        self.lbox.send(state)
 
 class Server(Communication):
     def __init__(self):
         Communication.__init__(connectionName="ev3dev")
-        #self.initiate(self)
+        self.initiate(self)
 
     def initiate(self):
         super().initiate()
@@ -424,22 +429,26 @@ class Server(Communication):
         self.mbox.wait()
         print(self.mbox.read())
         self.mbox.send("[+] hello to you!")
-    
+
+        self.lbox.wait()
+
 class Client(Communication):
     def __init__(self):
         Communication.__init__(connectionName="ev3client")
-        #self.initiate(self)
+        self.initiate(self)
 
     def initiate(self):
         super().initiate()
         self.Instance = BluetoothMailboxClient()
-        mbox = TextMailbox("ev3client", self.Instance)
-        print('[/] establishing connection...')
+        self.mbox = TextMailbox(self.connectionName, self.Instance)
+        print("[/] establishing connection...")
         self.Instance.connect(self.connectionName)
-        print('[+] Connected!')
+        print("[+] Connected!")
         self.mbox.send('[+] hello!')
         self.mbox.wait()
         print(self.mbox.read())
+
+        Communication.SendNewLogicState(self, True)
     
 robot = Robot()
 
