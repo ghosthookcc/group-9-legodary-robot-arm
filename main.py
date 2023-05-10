@@ -167,9 +167,11 @@ class Robot(object):
             wait(5000)
             RobotSorting.colorZoneSorting(self)
 
-    def getState(self):
+    def setState(self, state: States) -> None:
+        self.state = state
+    def getState(self) -> States:
         return self.state
-    def isRunning(self):
+    def isRunning(self) -> bool:
         return self.running
 
 class RobotMotors(Robot):
@@ -367,11 +369,12 @@ class Communication(object):
     def UpdateState(self) -> bool: #håll koll på vilket stadie roboten är i just nu
         isReady = True
         if self.reference.isRunning():
+            currentState = self.reference.getState()
             if (self.lbox.read() == False): 
-                self.state = self.States.WAITING
-            if (self.state == self.States.IDLE and self.lbox.read() == True):
-                self.state = self.States.PICKUP
-            if (self.state == self.States.SORTING):
+                self.reference.setState(self.States.WAITING)
+            if (currentState == Robot.States.IDLE and self.lbox.read() == True):
+                self.reference.setState(self.States.PICKUP)
+            if (currentState == Robot.States.SORTING):
                 self.lbox.send(True)
         return isReady
     
@@ -423,7 +426,7 @@ def main():
                                                  daemon = False # Testa det här värdet med True också om server och robot inte kör parallelt
                                                 )
     communicationMainLoopThread.start() 
-    
+
     robot.automate()
 
 if __name__ == "__main__":
