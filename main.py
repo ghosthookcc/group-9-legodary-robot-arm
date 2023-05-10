@@ -54,7 +54,7 @@ class Robot(object):
         self.positionList: list = []
         self.count: int = 0
         self.running: bool = False
-        
+
     def findColor(self) -> Color:
         ev3.screen.clear()
         color: Color = colorSensor.color()
@@ -166,6 +166,11 @@ class Robot(object):
         while self.running:
             wait(5000)
             RobotSorting.colorZoneSorting(self)
+
+    def getState(self):
+        return self.state
+    def isRunning(self):
+        return self.running
 
 class RobotMotors(Robot):
     def angleToDegrees(self, angle: float) -> float:
@@ -337,17 +342,19 @@ class RobotSorting(Robot):
         RobotMotors.moveToGivenDegree(self, horizontalMotor, 0.0)
         self.state = self.States.IDLE
 
-class Communication(Robot):
+class Communication(object):
     Instance: object = None
-    def __init__(self, connectionName: str):
+    reference: object = None
+    def __init__(self, connectionName: str, reference: object):
+        self.reference = reference
         self.connectionName: str = connectionName
         self.mbox: TextMailbox = None
         self.lbox: LogicMailbox = None
-        self.initiate(self)
+        self.initiate()
 
     def main_loop(self) -> None:
-        while (self.state != self.States.EXITING):
-            self.UpdateState(self)
+        while (self.reference.getState() != Robot.States.EXITING):
+            Communication.UpdateState(self)
             time.sleep(0.2)
 
     def getInstance(self) -> None:
@@ -359,7 +366,7 @@ class Communication(Robot):
 
     def UpdateState(self) -> bool: #håll koll på vilket stadie roboten är i just nu
         isReady = True
-        if self.running:
+        if self.reference.isRunning():
             if (self.lbox.read() == False): 
                 self.state = self.States.WAITING
             if (self.state == self.States.IDLE and self.lbox.read() == True):
@@ -372,9 +379,9 @@ class Communication(Robot):
         self.lbox.send(state)
 
 class Server(Communication):
-    def __init__(self):
-        Communication.__init__(connectionName="ev3dev")
-        self.initiate(self)
+    def __init__(self, reference: object):
+        Communication.__init__(self, "ev3dev", reference)
+        Communication.initiate(self)
 
     def initiate(self) -> None:
         super().initiate()
@@ -390,9 +397,9 @@ class Server(Communication):
         self.lbox.wait()
 
 class Client(Communication):
-    def __init__(self):
-        Communication.__init__(connectionName="ev3client")
-        self.initiate(self)
+    def __init__(self, reference: object):
+        Communication.__init__(self, "ev3client", reference)
+        Communication.initiate(self)
 
     def initiate(self) -> None:
         super().initiate()
@@ -410,11 +417,11 @@ class Client(Communication):
 robot: Robot = Robot()
 
 def main():
-    server: Server = Server()
-    
-    communicationMainLoopThread: Thread = Thread(target=server.main_loop)
-    communicationMainLoopThread.daemon = False # Testa det här värdet med True också om server och robot inte kör parallelt
-    communicationMainLoopThread.setName("StateObserver")
+    server: Server = Server(reference = robot)
+    communicationMainLoopThread: Thread = Thread(target = server.main_loop, 
+                                                 name   = "StateObserver",
+                                                 daemon = False # Testa det här värdet med True också om server och robot inte kör parallelt
+                                                )
     communicationMainLoopThread.start() 
     
     robot.automate()
