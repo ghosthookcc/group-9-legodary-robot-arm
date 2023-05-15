@@ -1,27 +1,22 @@
 #!/usr/bin/env pybricks-micropython
 from pybricks.hubs import EV3Brick
-from pybricks.ev3devices import (Motor, TouchSensor, ColorSensor,
-                                 InfraredSensor, UltrasonicSensor, GyroSensor)
-from pybricks.parameters import Port, Stop, Direction, Button, Color
-from pybricks.tools import wait, StopWatch, DataLog
-from pybricks.robotics import DriveBase
-from pybricks.media.ev3dev import SoundFile, ImageFile
-from pybricks.messaging import BluetoothMailboxServer, BluetoothMailboxClient, TextMailbox
-
-#from enum import Enum
+from pybricks.ev3devices import (Motor, TouchSensor, ColorSensor)
+from pybricks.parameters import Port, Stop, Button, Color
+from pybricks.tools import wait
+from pybricks.messaging import (BluetoothMailboxServer, BluetoothMailboxClient,
+                                TextMailbox)
 
 import os
-import time
 import time
 
 ev3 = EV3Brick()
 
-clawMotor = Motor(Port.A)
-verticalMotor = Motor(Port.B)
-horizontalMotor = Motor(Port.C)
+claw_motor = Motor(Port.A)
+vertical_motor = Motor(Port.B)
+horizontal_motor = Motor(Port.C)
 
-colorSensor = ColorSensor(Port.S2)
-touchSensor = TouchSensor(Port.S1)
+color_sensor = ColorSensor(Port.S2)
+touch_sensor = TouchSensor(Port.S1)
 
 CLAWOPENANGLE = 90.0
 
@@ -32,91 +27,105 @@ HORIZONTALMOTORHALFANGLE = 360.0
 
 CLAWMAXHORIZONTALANGLE = 180.0
 
+
 class Robot(object):
-    #class State(Enum):
-    #    IDLE = 0
-    #    MOVING = 1
-    #    GRABBING = 2
+    """
+    Base class for Robot
+    """
 
     def __init__(self):
-        self.robotHorizontalMotorAngle = 0.0 
-        self.robotClawMotorAngle = 0.0
-        self.robotVerticalMotorAngle = 0.0
+        self.robot_horizontal_motor_angle = 0.0
+        self.robot_claw_motor_angle = 0.0
+        self.robot_vertical_motor_angle = 0.0
         self.CLAWRESISTANCE = 0.0
         self.VERTICALRESISTANCE = 0.0
-        self.rotationScale = None
+        self.rotation_scale = None
         self.zones = []
-        self.colorDict = {}
+        self.color_dict = {}
         self.pickupzone = ()
-        self.positionList = []
+        self.position_list = []
         self.count = 0
 
-    def findColor(self):
+    def find_color(self):
+        """
+        A function that returns the name of the color sensed by the color
+        sensor.\nReturns either Green/Blue/Red/Yellow
+        """
         ev3.screen.clear()
-        color = colorSensor.color()
+        color = color_sensor.rgb()
         message = None
-        if color == Color.BLUE:
+        if color[2] < 17:  # RED / GREEN / YELLOW
+            if color[0] <= 6:
+                message = "Green"
+            else:  # RED / YELLOW
+                if 0 <= color[1] <= 5:
+                    message = "Red"
+                else:
+                    message = "Yellow"
+        else:
             message = "Blue"
-        elif color == Color.RED:
-            message = "Red"
-        elif color == Color.GREEN:
-            message = "Green"
-        elif color == Color.YELLOW:
-            message == "Yellow"
-        ev3.screen.draw_text(20,50,message)
-        return color
-    
+        ev3.screen.draw_text(20, 50, message)
+        return message
 
     def calibrate(self):
-        RobotReset.resetVertical(self)
-        RobotReset.resetAll(self)
+        """
+        A function that calibrate the robot's horizontal and vertical angles
+        """
+        RobotReset.reset_vertical(self)
+        RobotReset.reset_all(self)
 
-        clawMotor.run_until_stalled(100)
-        clawMotor.reset_angle(0.0)
-        self.robotClawMotorAngle = 0.0
+        claw_motor.run_until_stalled(100)
+        claw_motor.reset_angle(0.0)
+        self.robot_claw_motor_angle = 0.0
 
-        RobotClaw.openClaw(self)
-        self.CLAWRESISTANCE = RobotMotors.meassureResistance(self, clawMotor)
-        RobotClaw.closeClaw(self)
-        RobotClaw.openClaw(self)
-        self.VERTICALRESISTANCE = RobotMotors.meassureResistance(self, verticalMotor)
+        RobotClaw.open_claw(self)
+        self.CLAWRESISTANCE = RobotMotors.meassure_resistance(self, claw_motor)
+        RobotClaw.close_claw(self)
+        RobotClaw.open_claw(self)
+        self.VERTICALRESISTANCE = RobotMotors.meassure_resistance(self, vertical_motor)
 
-        RobotClaw.raiseClaw(self)
-        RobotClaw.closeClaw(self)
-        self.zones = Robot.calibrateZones(self)
+        RobotMotors.raise_arm(self)
+        RobotClaw.close_claw(self)
+        self.zones = Robot.calibrate_zones(self)
         self.pickupzone = self.zones[0]
-        self.positionList = self.zones[1:]
-    
-    def calibrateZones(self):
-        namelst = [("Pickup Zone",Color.RED),( "Drop off Zone 1",Color.GREEN),( "Drop off Zone 2",Color.YELLOW) ]
+        self.position_list = self.zones[1:]
+
+    def calibrate_zones(self):
+        """
+        A function that allows the user to chose specific zones for
+        drop-off and pickup using ev3 buttons
+        """
+        namelst = [("Pickup Zone", Color.RED),
+                   ("Drop off Zone 1", Color.GREEN),
+                   ("Drop off Zone 2", Color.YELLOW)]
         zonelst = []
-        RobotClaw.openClaw(self)
+        RobotClaw.open_claw(self)
         for i in namelst:
             ev3.light.on(i[1])
             ev3.screen.draw_text(20, 50, i[0])
             wait(500)
             while True:
-                pressedButtons = ev3.buttons.pressed()
-                if len(pressedButtons) > 0:
-                    if pressedButtons[0] == Button.CENTER:
+                pressed_buttons = ev3.buttons.pressed()
+                if len(pressed_buttons) > 0:
+                    if pressed_buttons[0] == Button.CENTER:
                         break
-                    elif pressedButtons[0] == Button.UP:
-                        RobotMotors.moveByGivenMotorAngle(self,verticalMotor, -10)
-                    elif pressedButtons[0] == Button.DOWN:
-                        RobotMotors.moveByGivenMotorAngle(self,verticalMotor, 10)
-                    elif pressedButtons[0] == Button.RIGHT:
-                        RobotMotors.moveByGivenMotorAngle(self,horizontalMotor, 10)
-                    elif pressedButtons[0] == Button.LEFT:
-                        RobotMotors.moveByGivenMotorAngle(self,horizontalMotor, -10)
-            zonelst.append((RobotMotors.angleToDegrees(self,self.robotHorizontalMotorAngle), self.robotVerticalMotorAngle))
+                    if pressed_buttons[0] == Button.UP:
+                        RobotMotors.move_by_given_motor_angle(self, vertical_motor, -10)
+                    elif pressed_buttons[0] == Button.DOWN:
+                        RobotMotors.move_by_given_motor_angle(self, vertical_motor, 10)
+                    elif pressed_buttons[0] == Button.RIGHT:
+                        RobotMotors.move_by_given_motor_angle(self, horizontal_motor, 10)
+                    elif pressed_buttons[0] == Button.LEFT:
+                        RobotMotors.move_by_given_motor_angle(self, horizontal_motor, -10)
+            zonelst.append((RobotMotors.angle_to_degrees(self, self.robot_horizontal_motor_angle), self.robot_vertical_motor_angle))
             ev3.screen.clear()
         ev3.light.off()
         return zonelst
 
-    def userInterface(self):
+    def user_interface(self):
+        """A function that allows testing of specific functions"""
         while True:
             input(": Press enter :")
-            #input(": Press any key :")
             os.system("clear")
             print("1: Raise Claw")
             print("2: Lower Claw")
@@ -128,63 +137,57 @@ class Robot(object):
             print("8: Sort Color")
             print("0: Exit")
 
-                    
-            #sorc = input("1 for server, 2 for client: ")
-            #if sorc == "1":
-            #    network = Server()
-            #elif sorc == "2":
-            #    network = Client()
-            #else:
-            #    print("No")
-
-            #network.initiate(network)
-
-            #while True:
-            
-             #   network.currentState
-              #  wait(5000)
-            
             answer = input(": ")
             if answer == "1":
-                RobotClaw.raiseClaw(self)
+                RobotMotors.raise_arm(self)
             elif answer == "2":
-                RobotClaw.lowerClaw(self)
-            elif answer =="3":
-                RobotClaw.openClaw(self)
+                RobotMotors.lower_arm(self)
+            elif answer == "3":
+                RobotClaw.open_claw(self)
             elif answer == "4":
-                RobotClaw.closeClaw(self)
+                RobotClaw.close_claw(self)
             elif answer == "5":
-                ev3.light.on(Robot.findColor(self))
+                print(Robot.find_color(self))
             elif answer == "6":
                 motor = int(input("Motor (1 horizontal, 2 vertical): "))
-                moveToDegree = float(input("Degree: "))
-                if (motor == 1):
-                    RobotMotors.moveToGivenDegree(self, horizontalMotor, moveToDegree)
-                elif (motor == 2):
-                    RobotMotors.moveToGivenDegree(self, verticalMotor, moveToDegree)
+                move_to_degree = float(input("Degree: "))
+                if motor == 1:
+                    RobotMotors.move_to_given_degree(self, horizontal_motor, move_to_degree)
+                elif motor == 2:
+                    RobotMotors.move_to_given_degree(self, vertical_motor, move_to_degree)
             elif answer == "7":
-                isHolding = RobotClaw.isHoldingItem(self)
-                print("Item is being held: " + str(isHolding))
+                is_holding = RobotClaw.is_holding_item(self)
+                print("Item is being held: " + str(is_holding))
             elif answer == "8":
-                RobotSorting.colorZoneSorting(self)
+                RobotSorting.color_zone_sorting(self)
             elif answer == "0":
-                RobotReset.exitProgram(self)
-    
+                RobotReset.exit_program(self)
+
     def manual(self):
+        """
+        A function that allows manual control of the robot
+        """
         self.calibrate()
-        self.userInterface()
-    def automate(self):
-        self.calibrate()
-        while True:
-            wait(5000)
-            RobotSorting.colorZoneSorting(self)
+        self.user_interface()
+
 
 class RobotMotors(Robot):
-    def angleToDegrees(self, angle: float) -> float:
-        return angle / self.rotationScale
-    def degreeToMotorAngle(self, degree: float) -> float:
-        return degree * self.rotationScale
-    def moveByGivenMotorAngle(self, motor, motorAngle: float, speed: int = 200):
+    """
+    A class that handles motor movement
+    """
+    def angle_to_degrees(self, angle: float) -> float:
+        """
+        A function that converts motor angles to degrees
+        """
+        return angle / self.rotation_scale
+
+    def degree_to_motor_angle(self, degree: float) -> float:
+        """
+        A function that converts degrees to motor angles
+        """
+        return degree * self.rotation_scale
+
+    def move_by_given_motor_angle(self, motor, motor_angle: float, speed: int = 200):
         """
         Raise claw to sensor height and then move by the specified motor angle.
         [Required] motor
@@ -192,230 +195,271 @@ class RobotMotors(Robot):
         [Optional] speed
         """
 
-        if (motor == horizontalMotor):
-            RobotClaw.raiseClaw(self)
-            self.robotHorizontalMotorAngle += motorAngle
-        elif (motor == verticalMotor):
-            self.robotVerticalMotorAngle += motorAngle
-        elif (motor == clawMotor):
-            self.robotClawMotorAngle += motorAngle
-        motor.run_angle(speed, motorAngle)
-    def moveByGivenDegree(self, motor, motorDegree: float, speed: int = 200):
+        if motor == horizontal_motor:
+            RobotMotors.raise_arm(self, -90.0)
+            self.robot_horizontal_motor_angle += motor_angle
+        elif motor == vertical_motor:
+            self.robot_vertical_motor_angle += motor_angle
+        elif motor == claw_motor:
+            self.robot_claw_motor_angle += motor_angle
+        motor.run_angle(speed, motor_angle)
+
+    def move_by_given_degree(self, motor, motor_degree: float, speed: int = 200):
         """
-        Raise claw to sensor height and then convert input degrees to a motor angle,
-        then move the horizontal motor by the motor angle.
+        Raise claw to sensor height and then convert input degrees to a motor
+        angle, then move the horizontal motor by the motor angle.
         [Required] motor
         [Required] degree
         [Optional] speed
         """
-        motorAngle = RobotMotors.degreeToMotorAngle(self, motorDegree)
+        motor_angle = RobotMotors.degree_to_motor_angle(self, motor_degree)
 
-        if (motor == horizontalMotor):
-            RobotClaw.raiseClaw(self)
-            self.robotHorizontalMotorAngle += motorAngle
-        elif (motor == verticalMotor):
-            self.robotVerticalMotorAngle += motorAngle
-        elif (motor == clawMotor):
-            self.robotClawMotorAngle += motorAngle
-        motor.run_angle(speed, motorAngle)
-    def moveToGivenDegree(self, motor, motorDegree: float, speed: int = 200):
+        if motor == horizontal_motor:
+            RobotMotors.raise_arm(self)
+            self.robot_horizontal_motor_angle += motor_angle
+        elif motor == vertical_motor:
+            self.robot_vertical_motor_angle += motor_angle
+        elif motor == claw_motor:
+            self.robot_claw_motor_angle += motor_angle
+        motor.run_angle(speed, motor_angle)
+
+    def move_to_given_degree(self, motor, motor_degree: float, speed: int = 200):
         """
-        Raise claw to sensor height and then convert input degrees to a motor angle,
-        then reset the motor to its origin (0 degrees) and rotate to the new degrees,
-        degrees is between -90 to 90 degrees from the origin.
+        Raise claw to sensor height and then convert input degrees to a motor
+        angle, then reset the motor to its origin (0 degrees) and rotate to
+        the new degrees, degrees is between -90 to 90 degrees from the origin.
         [Required] motor
         [Required] degree from origin
         [Optional] speed
         """
-
+        if motor == horizontal_motor:
+            RobotMotors.raise_arm(self, -90)
         motor.run_target(150, 0.0)
-        if (motor == horizontalMotor):
-            self.robotHorizontalMotorAngle = 0.0
-        elif (motor == verticalMotor):
-            self.robotVerticalMotorAngle = 0.0
-        elif (motor == clawMotor):
-            self.robotClawMotorAngle = 0.0
-        moveMotorAngle = RobotMotors.degreeToMotorAngle(self, motorDegree)
+        if motor == horizontal_motor:
+            self.robot_horizontal_motor_angle = 0.0
+        elif motor == vertical_motor:
+            self.robot_vertical_motor_angle = 0.0
+        elif motor == claw_motor:
+            self.robot_claw_motor_angle = 0.0
+        move_motor_angle = RobotMotors.degree_to_motor_angle(self, motor_degree)
 
-        RobotMotors.moveByGivenMotorAngle(self, motor, moveMotorAngle, speed)
-    
-    def meassureResistance(self, motor):
+        RobotMotors.move_by_given_motor_angle(self, motor, move_motor_angle, speed)
+
+    def meassure_resistance(self, motor):
         """
-        Meassure resistance of a motor by running the motor until stalled at a angle of atleast 80%
+        Meassure resistance of a motor by running the motor until stalled at a
+        angle of atleast 80%
         """
-        resistance = motor.run_until_stalled(70,Stop.HOLD,80)
+        resistance = motor.run_until_stalled(70, Stop.HOLD, 80)
         return resistance
-    
-class RobotClaw(Robot):
-    def raiseClaw(self):
+
+    def raise_arm(self, offset=0.0):
         """
         Raise claw on the vertical axis to motor angle of the color sensor
         """
-        self.robotVerticalMotorAngle -=230
-        verticalMotor.run_target(100, -230.0)
+        self.robot_vertical_motor_angle = -240 + offset
+        vertical_motor.run_target(100, -240.0 + offset)
 
-    def lowerClaw(self):
+    def lower_arm(self, offset=0.0):
         """
         Lower claw on vertical axis to default position after calibration
         """
-        self.robotVerticalMotorAngle = 0.0
-        verticalMotor.run_target(100, 0.0)
+        self.robot_vertical_motor_angle = offset
+        vertical_motor.run_target(100, offset)
 
-    def openClaw(self):
+
+class RobotClaw(Robot):
+    """
+    A class that handles claw movement
+    """
+    def open_claw(self):
         """
         Open claw if the value is not bigger than the max claw motor angle
         """
-        newAngle = self.robotClawMotorAngle - CLAWOPENANGLE
-        if (newAngle >= -CLAWMAXVERTICALANGLE):
-            self.robotClawMotorAngle = newAngle
-            clawMotor.stop()
-            clawMotor.run_target(200, -CLAWOPENANGLE)
+        self.robot_claw_motor_angle = -CLAWOPENANGLE
+        claw_motor.stop()
+        claw_motor.run_target(200, -CLAWOPENANGLE)
 
-    def closeClaw(self):
+    def close_claw(self):
         """
-        Close claw by running the claw motor until stalled and then resetting the angle to 0
+        Close claw by running the claw motor until stalled and then resetting
+        the angle to 0
         """
-        isHolding = RobotClaw.isHoldingItem(self)
-        if not isHolding:
-            clawMotor.stop()
-            clawMotor.run_target(200, 0.0)
-        self.robotClawMotorAngle = 0.0
-        clawMotor.reset_angle(0.0)
-        return isHolding
+        is_holding = RobotClaw.is_holding_item(self)
+        if not is_holding:
+            claw_motor.stop()
+            claw_motor.run_target(200, 0.0)
+            self.robot_claw_motor_angle = 0.0
+            claw_motor.reset_angle(0.0)
+        return is_holding
 
-    def isHoldingItem(self) -> bool:
-        isHolding = False
-        t_end = time.time() + 3.0
-        while not (clawMotor.stalled() and clawMotor.angle() != 0.0):
-            if (time.time() > t_end):
-                if (clawMotor.angle() <= -16.0):
-                    isHolding = True
+    def is_holding_item(self) -> bool:
+        """
+        A function that detects whether the clas is holding anything or not\n
+        Returns true if holding anything
+        """
+        is_holding = False
+        t_end = time.time() + 4.0
+        while not (claw_motor.stalled() and claw_motor.angle() != 0.0):
+            print("ANGLE: " + str(claw_motor.angle()))
+            if time.time() >= t_end:
+                if claw_motor.angle() <= -17.0:
+                    is_holding = True
                 break
-            clawMotor.run_time(200, 100, Stop.HOLD)
-        return isHolding
+            claw_motor.run_time(200, 100, Stop.HOLD)
+        return is_holding
 
-    def pickupItem(self):
-        RobotClaw.openClaw(self)
-        wait(1000)
-        RobotClaw.lowerClaw(self)
-        wait(1000)
-        RobotClaw.closeClaw(self)
-        wait(1000)
-        RobotClaw.raiseClaw(self)
-        wait(1000)
-
-    def dropOffItem(self):
-        RobotClaw.lowerClaw(self)
-        wait(1000)
-        RobotClaw.openClaw(self)
-        wait(1000)
-        RobotClaw.raiseClaw(self)
-        wait(1000)
 
 class RobotReset(Robot):
-    def resetHorizontal(self):
-        while not touchSensor.pressed():
-            RobotMotors.moveByGivenMotorAngle(self, horizontalMotor, 5.0, 500)
-        self.rotationScale = self.robotHorizontalMotorAngle / 90.0
-        RobotMotors.moveByGivenMotorAngle(self, horizontalMotor, -(90.0 * self.rotationScale))
-        self.robotHorizontalMotorAngle = 0.0
-        horizontalMotor.reset_angle(0.0)
+    """
+    A class that handle reset functions for the robot
+    """
+    def reset_horizontal(self):
+        """
+        A function that resets the horizontal rotation
+        """
+        while not touch_sensor.pressed():
+            RobotMotors.move_by_given_motor_angle(self, horizontal_motor, 5.0, 500)
+        self.rotation_scale = self.robot_horizontal_motor_angle / 90.0
+        RobotMotors.move_by_given_motor_angle(self, horizontal_motor, -(90.0 * self.rotation_scale))
+        self.robot_horizontal_motor_angle = 0.0
+        horizontal_motor.reset_angle(0.0)
 
-    def resetVertical(self):
-        verticalMotor.run_until_stalled(100, Stop.HOLD, 10)
-        self.robotVerticalMotorAngle = 0.0
-        verticalMotor.reset_angle(0.0)
+    def reset_vertical(self):
+        """
+        A function that resets the vertical rotation
+        """
+        vertical_motor.run_until_stalled(100, Stop.HOLD, 10)
+        self.robot_vertical_motor_angle = 0.0
+        vertical_motor.reset_angle(0.0)
 
-    def resetAll(self):
-        RobotClaw.closeClaw(self)
-        RobotReset.resetHorizontal(self)
-        RobotReset.resetVertical(self)
+    def reset_all(self):
+        """
+        A function that resets both horizontal and vertical rotations
+        """
+        RobotClaw.close_claw(self)
+        RobotReset.reset_horizontal(self)
+        RobotReset.reset_vertical(self)
 
-    def exitProgram(self):
-        RobotClaw.closeClaw(self)
-        RobotMotors.moveToGivenDegree(self, horizontalMotor, 0.0)
-        RobotReset.resetVertical(self)
+    def exit_program(self):
+        """
+        A function that call reset vertical then exits the program
+        """
+        RobotClaw.close_claw(self)
+        RobotMotors.move_to_given_degree(self, horizontal_motor, 0.0)
+        RobotReset.reset_vertical(self)
         os._exit(0)
-    
-class RobotSorting(Robot):
-    def colorZoneSorting(self):
-        print(self.pickupzone)
-        print(self.positionList)
-        RobotMotors.moveToGivenDegree(self,verticalMotor,-90)
-        RobotMotors.moveToGivenDegree(self,horizontalMotor,self.pickupzone[0])   #pickupLocation
-        RobotClaw.openClaw(self)
-        RobotClaw.lowerClaw(self)
-        #RobotMotors.moveToGivenDegree(self,verticalMotor,self.pickupzone[1])
-        holding = RobotClaw.closeClaw(self)
-        if holding:
-            RobotClaw.raiseClaw(self)
-            color = Robot.findColor(self)
-            print(color)
-        
-            if color not in self.colorDict and self.count<2:
-                self.colorDict[color] = self.positionList[self.count]  #+1 för första element är pickupZone
-                self.count +=1
-            if color in self.colorDict:
-                position = self.colorDict[color]
-                print(position)
-                #RobotMotors.moveToGivenDegree(self,verticalMotor, -90)
-                RobotMotors.moveToGivenDegree(self,horizontalMotor,position[0])
-                RobotClaw.lowerClaw(self)
-                #RobotMotors.moveToGivenDegree(self,verticalMotor,position[1])
-                RobotClaw.openClaw(self)
-            else:
-                RobotClaw.lowerClaw(self) # TEST
-                RobotClaw.openClaw(self)
-            #RobotClaw.dropOffItem(self,position[1]) //how it should be with its y-coordinate
-    
-class Communication(Robot): #håll koll på vilket stadie roboten är i just nu
-    Instance = None
-    # serverName = "ev3dev"
-    def __init__(self, serverName):
-        self.SERVER = serverName
-        self.initiate(self)
-    
-    def getInstance(self):
-        if (self.Instance == None):
-            self.Instance = self
-        return self.Instance
 
-    def initiate(self):
-        self.getInstance()
+
+class RobotSorting(Robot):
+    """A class that handles sorting of colors"""
+    def color_zone_sorting(self):
+        """A function that collect a cube from the selected pickup zone from
+        the calibration sequence.\n
+        Then it assign a drop-off zone to that specific color for the duration
+        of the run
+        """
+        color = None
+        RobotMotors.raise_arm(self, -90.0)
+        RobotMotors.move_to_given_degree(self, horizontal_motor, self.pickupzone[0])
+        RobotClaw.open_claw(self)
+        RobotMotors.lower_arm(self, self.pickupzone[1])
+        wait(3000)
+        holding = RobotClaw.close_claw(self)
+        print("Holding: " + str(holding))
+        if holding:
+            RobotMotors.raise_arm(self)
+            color = Robot.findColor(self)
+            RobotMotors.raise_arm(self, -90)
+
+            if (color not in self.color_dict and self.count < 2 and
+                    color not in ["Blue", "Red", "Green", "Yellow"]):
+
+                self.color_dict[color] = self.position_list[self.count]
+                self.count += 1
+            if color in self.color_dict:
+                position = self.color_dict[color]
+                RobotMotors.move_to_given_degree(self, horizontal_motor, position[0])
+                RobotMotors.lower_arm(self, position[1])
+                RobotClaw.open_claw(self)
+            else:
+                RobotMotors.lower_arm(self, self.pickupzone[1])
+                RobotClaw.open_claw(self)
+
+        RobotMotors.move_to_given_degree(self, horizontal_motor, 0.0)
+        RobotMotors.raise_arm(self, -90)
+        return color
+
+
+class Communication(Robot):
+    """
+    A Communication base class
+    """
+    def __init__(self):
+        self.SERVER = "ev3dev"
+
 
 class Server(Communication):
-    def initiate(self):
-        super().initiate()
-        self.Instance = BluetoothMailboxServer()       
-        mbox = TextMailbox("greeting", self.Instance)
-        print("[/] Waiting for connection...")
-        self.Instance.wait_for_connection()
-        print("[+] Connected!")
-        mbox.wait()
-        print(mbox.read())
-        mbox.send("[+] hello to you!")
-            
+    """
+    A class that acts as a server in a bluetooth connection between two robots
+    """
+    def automate(self):
+        """
+        A function that automate the sorting of colors between two robots
+        """
+        robot = Robot()
+        robot.calibrate()
+        server = BluetoothMailboxServer()
+        server.wait_for_connection()
+        print("Connected")
+        mbox = TextMailbox("Mail", server)
+        SERVERPICKUP = "serverpickup"
+        CLIENTPICKUP = "clientpickup"
+        RobotMotors.move_to_given_degree(robot, horizontal_motor, 0.0)
+        mbox.send(CLIENTPICKUP)
+        while True:
+            mbox.wait()
+            if mbox.read() == SERVERPICKUP:
+                RobotSorting.colorZoneSorting(robot)
+                mbox.send(CLIENTPICKUP)
+
+
 class Client(Communication):
-    def initiate(self):
-        super().initiate()
-        self.Instance = BluetoothMailboxClient()
-        mbox = TextMailbox('greeting', self.Instance)
-        print('[/] establishing connection...')
-        self.Instance.connect(self.SERVER)
-        print('[+] Connected!')
-        mbox.send('[+] hello!')
-        mbox.wait()
-        print(mbox.read())
+    """
+    A class that acts as a client in a bluetooth connection between two robots
+    """
+    def automate(self):
+        """
+        A function that automate the sorting between two robots
+        """
+        robot = Robot()
+        robot.calibrate()
+        client = BluetoothMailboxClient()
+        client.connect(self.SERVER)
+        mbox = TextMailbox("Mail", client)
+        SERVERPICKUP = "serverpickup"
+        CLIENTPICKUP = "clientpickup"
+        RobotMotors.move_to_given_degree(robot, horizontal_motor, 0.0)
 
+        while True:
+            if mbox.read() == CLIENTPICKUP:
+                pickupcolor = RobotSorting.colorZoneSorting(robot)
+                if pickupcolor is None:
+                    pass
+                elif pickupcolor not in robot.color_dict:
+                    mbox.send(SERVERPICKUP)
+                    mbox.wait()
 
-robot = Robot()
 
 def main():
-    robot.automate()
-    #robot.manual()
-    #while True:
-    #    wait(5000)
-    #    RobotSorting.colorZoneSorting()
+    """
+    A function that everything starts from
+    """
+    server = Server()
+    server.automate()
+    # client = Client()
+    # client.automate()
+
 
 if __name__ == "__main__":
     main()
