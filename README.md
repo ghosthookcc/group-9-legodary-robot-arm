@@ -1,4 +1,4 @@
-# PA1473 - Software Development: Agile Project (Template)
+# Group 9 - PA1473 Project 2 Description 
 
 ## Introduction
 - Using two remodeled versions of the Lego Mindstorms EV3 Robot Arm, this project makes the robots communicate with eachother to sort red, green, blue and yellow bricks into different zones.
