@@ -59,21 +59,9 @@ class Robot(object):
                         message = "Yellow"
         else:
             message = "Blue"
-
-
         ev3.screen.draw_text(20,50,message) 
         return message
 
-        if color[0] < 50 and color[1] < 50 and color[2] > 50:
-            message = "Blue"
-        elif color[0] > 50 and color[1] < 50 and color[2] < 50:
-            message = "Red"
-        elif color[0] < 50 and color[1] > 50 and color[2] < 50:
-            message = "Green"
-        elif color[0] < 50 and color[1] > 50 and color[2] > 50:
-            message == "Yellow"
-        ev3.screen.draw_text(20,50,message)
-        return message
 
     def calibrate(self):
         RobotReset.resetVertical(self)
