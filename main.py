@@ -9,8 +9,7 @@ from pybricks.media.ev3dev import SoundFile, ImageFile
 from pybricks.messaging import BluetoothMailboxServer, BluetoothMailboxClient, TextMailbox, LogicMailbox
 
 from threading import Thread
-from enum import Enum
-
+ 
 import os
 import time
 
@@ -33,12 +32,11 @@ HORIZONTALMOTORHALFANGLE = 360.0
 CLAWMAXHORIZONTALANGLE = 180.0
 
 class Robot(object):
-    class States(Enum):
-        IDLE = 0
-        PICKUP = 1
-        SORTING = 2
-        WAITING = 3
-        EXITING = 4
+    IDLE = 0
+    PICKUP = 1
+    SORTING = 2
+    WAITING = 3
+    EXITING = 4
 
     def __init__(self):
         self.robotHorizontalMotorAngle: float = 0.0 
@@ -47,7 +45,7 @@ class Robot(object):
         self.CLAWRESISTANCE: float = 0.0
         self.VERTICALRESISTANCE: float = 0.0
         self.rotationScale: float = 0.0
-        self.state: Robot.States = self.States.IDLE
+        self.state = IDLE
         self.zones: list = []
         self.colorDict: dict = {}
         self.pickupzone: tuple = ()
@@ -167,9 +165,9 @@ class Robot(object):
             wait(5000)
             RobotSorting.colorZoneSorting(self)
 
-    def setState(self, state: States) -> None:
+    def setState(self, state) -> None:
         self.state = state
-    def getState(self) -> States:
+    def getState(self) -> int:
         return self.state
     def isRunning(self) -> bool:
         return self.running
@@ -307,7 +305,7 @@ class RobotReset(Robot):
         RobotReset.resetVertical(self)
 
     def exitProgram(self) -> None:
-        self.state = self.States.EXITING
+        self.state = self.EXITING
         RobotClaw.closeClaw(self)
         RobotMotors.moveToGivenDegree(self, horizontalMotor, 0.0)
         RobotReset.resetVertical(self)
@@ -316,14 +314,14 @@ class RobotReset(Robot):
     
 class RobotSorting(Robot):
     def colorZoneSorting(self) -> None:
-        if (self.state == self.States.PICKUP):
+        if (self.state == self.PICKUP):
             RobotClaw.raiseClaw(self, -90.0)
             RobotMotors.moveToGivenDegree(self,horizontalMotor,self.pickupzone[0]) 
             RobotClaw.lowerClaw(self, self.pickupzone[1])
             RobotClaw.openClaw(self)
             holding = RobotClaw.closeClaw(self)
 
-            self.state = self.States.SORTING
+            self.state = self.SORTING
 
             if holding:
                 RobotClaw.raiseClaw(self)
@@ -342,7 +340,7 @@ class RobotSorting(Robot):
         RobotClaw.openClaw(self)
         RobotClaw.raiseClaw(self, -90.0)
         RobotMotors.moveToGivenDegree(self, horizontalMotor, 0.0)
-        self.state = self.States.IDLE
+        self.state = self.IDLE
 
 class Communication(object):
     Instance: object = None
@@ -355,7 +353,7 @@ class Communication(object):
         self.initiate()
 
     def main_loop(self) -> None:
-        while (self.reference.getState() != Robot.States.EXITING):
+        while (self.reference.getState() != Robot.EXITING):
             Communication.UpdateState(self)
             time.sleep(0.2)
 
@@ -371,10 +369,10 @@ class Communication(object):
         if self.reference.isRunning():
             currentState = self.reference.getState()
             if (self.lbox.read() == False): 
-                self.reference.setState(self.States.WAITING)
+                self.reference.setState(self.WAITING)
             if (currentState == Robot.States.IDLE and self.lbox.read() == True):
-                self.reference.setState(self.States.PICKUP)
-            if (currentState == Robot.States.SORTING):
+                self.reference.setState(self.PICKUP)
+            if (currentState == Robot.SORTING):
                 self.lbox.send(True)
         return isReady
     
